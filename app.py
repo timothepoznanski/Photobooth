@@ -155,7 +155,7 @@ frame_lock = threading.Lock()
 
 @app.route('/capture', methods=['POST'])
 def capture_photo():
-    """Capturer la frame MJPEG actuelle directement depuis le flux vidéo"""
+    """Capturer une photo selon le type de caméra configuré"""
     global current_photo, last_frame
     
     try:
@@ -164,7 +164,41 @@ def capture_photo():
         filename = f'photo_{timestamp}.jpg'
         filepath = os.path.join(PHOTOS_FOLDER, filename)
         
-        # Capturer la frame actuelle du flux MJPEG
+        camera_type = config.get('camera_type', 'picamera')
+        
+        # Mode Pi Camera - utiliser rpicam-still pour une capture haute qualité
+        if camera_type == 'picamera':
+            logger.info("[CAPTURE] Utilisation de rpicam-still pour capture haute qualité")
+            try:
+                cmd = [
+                    'rpicam-still',
+                    '-o', filepath,
+                    '--timeout', '1000',
+                    '--width', '2304',      # Résolution plus élevée pour la photo
+                    '--height', '1296',
+                    '--nopreview'
+                ]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                
+                if result.returncode == 0 and os.path.exists(filepath):
+                    current_photo = filename
+                    logger.info(f"Photo Pi Camera capturée avec succès: {filename}")
+                    
+                    # Envoyer sur Telegram si activé
+                    send_type = config.get('telegram_send_type', 'photos')
+                    if send_type in ['photos', 'both']:
+                        threading.Thread(target=send_to_telegram, args=(filepath, config, "photo")).start()
+                    
+                    return jsonify({'success': True, 'filename': filename})
+                else:
+                    raise Exception(f"Échec rpicam-still: {result.stderr}")
+                    
+            except Exception as e:
+                logger.info(f"Erreur rpicam-still, fallback vers frame MJPEG: {e}")
+                # Fallback vers la méthode frame MJPEG
+        
+        # Mode USB ou fallback - capturer la frame actuelle du flux MJPEG
         with frame_lock:
             if last_frame is not None:
                 # Sauvegarder la frame directement
@@ -700,8 +734,31 @@ def generate_video_stream():
         # Arrêter tout processus caméra existant
         stop_camera_process()
         
+        # Mode test - utiliser une image statique
+        if camera_type == 'test':
+            logger.info("[CAMERA] Mode test - utilisation d'une image statique...")
+            test_image_path = 'static/test_frame.jpg'
+            
+            if os.path.exists(test_image_path):
+                with open(test_image_path, 'rb') as f:
+                    test_frame = f.read()
+                
+                # Stocker la frame de test pour capture
+                with frame_lock:
+                    last_frame = test_frame
+                
+                # Envoyer la frame de test en boucle
+                while True:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n'
+                           b'Content-Length: ' + str(len(test_frame)).encode() + b'\r\n\r\n' +
+                           test_frame + b'\r\n')
+                    time.sleep(0.1)  # Rafraîchir toutes les 100ms
+            else:
+                raise Exception("Image de test introuvable")
+        
         # Utiliser la caméra USB si configurée
-        if camera_type == 'usb':
+        elif camera_type == 'usb':
             logger.info("[CAMERA] Démarrage de la caméra USB...")
             camera_id = config.get('usb_camera_id', 0)
             usb_camera = UsbCamera(camera_id=camera_id)
@@ -727,9 +784,9 @@ def generate_video_stream():
         # Utiliser la Pi Camera par défaut
         else:
             logger.info("[CAMERA] Démarrage de la Pi Camera...")
-            # Commande libcamera-vid pour flux MJPEG - résolution 16/9
+            # Commande rpicam-vid pour flux MJPEG - résolution 16/9
             cmd = [
-                'libcamera-vid',
+                'rpicam-vid',
                 '--codec', 'mjpeg',
                 '--width', '1280',   # Résolution native plus compatible
                 '--height', '720',   # Vrai 16/9 sans bandes noires
