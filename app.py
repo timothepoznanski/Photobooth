@@ -720,6 +720,89 @@ def stop_camera():
     stop_camera_process()
     return jsonify({'status': 'camera_stopped'})
 
+@app.route('/admin/kiosk_control', methods=['POST'])
+def kiosk_control():
+    """Contrôler le mode kiosk (arrêter/redémarrer)"""
+    try:
+        action = request.json.get('action')
+        
+        if action == 'stop':
+            # Arrêter le service kiosk
+            subprocess.run(['sudo', 'systemctl', 'stop', 'simplebooth-kiosk.service'], check=True)
+            subprocess.run(['sudo', 'systemctl', 'disable', 'simplebooth-kiosk.service'], check=True)
+            # Arrêter Chromium
+            subprocess.run(['sudo', 'pkill', '-f', 'chromium'], check=False)
+            return jsonify({
+                'status': 'success',
+                'message': 'Mode kiosk arrêté. Vous pouvez maintenant utiliser l\'interface normale.'
+            })
+            
+        elif action == 'restart':
+            # Redémarrer le service kiosk
+            subprocess.run(['sudo', 'systemctl', 'enable', 'simplebooth-kiosk.service'], check=True)
+            subprocess.run(['sudo', 'systemctl', 'restart', 'simplebooth-kiosk.service'], check=True)
+            return jsonify({
+                'status': 'success',
+                'message': 'Mode kiosk redémarré. L\'application va se relancer en plein écran.'
+            })
+            
+        elif action == 'status':
+            # Vérifier l'état du service kiosk
+            result = subprocess.run(['sudo', 'systemctl', 'is-active', 'simplebooth-kiosk.service'], 
+                                  capture_output=True, text=True, check=False)
+            is_active = result.stdout.strip() == 'active'
+            
+            result_enabled = subprocess.run(['sudo', 'systemctl', 'is-enabled', 'simplebooth-kiosk.service'], 
+                                          capture_output=True, text=True, check=False)
+            is_enabled = result_enabled.stdout.strip() == 'enabled'
+            
+            return jsonify({
+                'status': 'success',
+                'kiosk_active': is_active,
+                'kiosk_enabled': is_enabled,
+                'message': f'Service kiosk: {"Actif" if is_active else "Inactif"} / {"Activé" if is_enabled else "Désactivé"}'
+            })
+            
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Action non reconnue'
+            }), 400
+            
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Erreur lors de l\'exécution de la commande: {str(e)}'
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Erreur: {str(e)}'
+        }), 500
+
+@app.route('/admin/shutdown', methods=['POST'])
+def shutdown_application():
+    """Arrêter complètement l'application"""
+    try:
+        # Arrêter le service kiosk
+        subprocess.run(['sudo', 'systemctl', 'stop', 'simplebooth-kiosk.service'], check=False)
+        subprocess.run(['sudo', 'systemctl', 'disable', 'simplebooth-kiosk.service'], check=False)
+        # Arrêter Chromium
+        subprocess.run(['sudo', 'pkill', '-f', 'chromium'], check=False)
+        # Arrêter tous les processus Python de l'app
+        subprocess.run(['sudo', 'pkill', '-f', 'python.*app.py'], check=False)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Application arrêtée complètement.'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Erreur: {str(e)}'
+        }), 500
+
 # Nettoyer les processus à la fermeture
 @atexit.register
 def cleanup():
