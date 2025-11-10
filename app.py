@@ -275,7 +275,7 @@ def print_photo():
 
 @app.route('/delete_current', methods=['POST'])
 def delete_current_photo():
-    """Supprimer la photo actuelle (depuis photos ou effet)"""
+    """Supprimer la photo actuelle"""
     global current_photo
     
     if current_photo:
@@ -399,7 +399,7 @@ def save_admin_config():
 
 @app.route('/admin/delete_photos', methods=['POST'])
 def delete_all_photos():
-    """Supprimer toutes les photos (normales et avec effet)"""
+    """Supprimer toutes les photos"""
     try:
         deleted_count = 0
         
@@ -434,14 +434,10 @@ def download_photo(filename):
 def reprint_photo(filename):
     """Réimprimer une photo spécifique"""
     try:
-        # Chercher la photo dans les deux dossiers
-        photo_path = None
-        if os.path.exists(os.path.join(PHOTOS_FOLDER, filename)):
-            photo_path = os.path.join(PHOTOS_FOLDER, filename)
-        elif os.path.exists(os.path.join(EFFECT_FOLDER, filename)):
-            photo_path = os.path.join(EFFECT_FOLDER, filename)
+        # Chercher la photo dans le dossier photos
+        photo_path = os.path.join(PHOTOS_FOLDER, filename)
         
-        if photo_path:
+        if os.path.exists(photo_path):
             # Vérifier si le script d'impression existe
             script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ScriptPythonPOS.py')
             if not os.path.exists(script_path):
@@ -487,8 +483,8 @@ def get_slideshow_data():
     """API pour récupérer les données du diaporama"""
     photos = []
     
-    # Déterminer le dossier source selon la configuration
-    source_folder = EFFECT_FOLDER if config.get('slideshow_source', 'photos') == 'effet' else PHOTOS_FOLDER
+    # Utiliser uniquement le dossier photos
+    source_folder = PHOTOS_FOLDER
     
     if os.path.exists(source_folder):
         for filename in os.listdir(source_folder):
@@ -512,12 +508,9 @@ def get_printer_status():
 @app.route('/photos/<filename>')
 def serve_photo(filename):
     """Servir les photos"""
-    # Vérifier d'abord dans le dossier photos
+    # Vérifier dans le dossier photos
     if os.path.exists(os.path.join(PHOTOS_FOLDER, filename)):
         return send_from_directory(PHOTOS_FOLDER, filename)
-    # Sinon vérifier dans le dossier effet
-    elif os.path.exists(os.path.join(EFFECT_FOLDER, filename)):
-        return send_from_directory(EFFECT_FOLDER, filename)
     else:
         abort(404)
 

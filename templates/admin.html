@@ -358,13 +358,9 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3><i class="fas fa-images me-2"></i>Gestion des Photos</h3>
                 <div>
-                    <span class="badge bg-primary me-2">
+                    <span class="badge bg-primary">
                         <i class="fas fa-camera me-1"></i>
-                        {{ photos|selectattr('type', 'equalto', 'photo')|list|length }} originales
-                    </span>
-                    <span class="badge bg-warning text-dark">
-                        <i class="fas fa-magic me-1"></i>
-                        {{ photos|selectattr('type', 'equalto', 'effet')|list|length }} avec effet
+                        {{ photos|length }} photo{{ 's' if photos|length > 1 else '' }}
                     </span>
                 </div>
             </div>
@@ -397,7 +393,7 @@
                                         <img src="{{ url_for('serve_photo', filename=photo.filename) }}" 
                                              alt="Aperçu" 
                                              style="width: 60px; height: 40px; object-fit: cover; border-radius: 5px; cursor: pointer;"
-                                             class="photo-thumbnail {% if photo.type == 'effet' %}border border-warning{% endif %}"
+                                             class="photo-thumbnail"
                                              data-filename="{{ photo.filename }}"
                                              data-type="{{ photo.type }}"
                                              data-date="{{ photo.date }}"
@@ -413,20 +409,12 @@
                                            onclick="openPhotoModal(this)">
                                             {{ photo.filename }}
                                         </a>
-                                        {% if photo.type == 'effet' %}
-                                            <i class="fas fa-magic text-warning ms-1" title="Photo avec effet IA"></i>
-                                        {% endif %}
+
                                     </td>
                                     <td>
-                                        {% if photo.type == 'effet' %}
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="fas fa-magic me-1"></i>Effet IA
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-primary">
-                                                <i class="fas fa-camera me-1"></i>Original
-                                            </span>
-                                        {% endif %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-camera me-1"></i>Photo
+                                        </span>
                                     </td>
                                     <td>{{ photo.date }}</td>
                                     <td>{{ "%.1f"|format(photo.size_kb) }} KB</td>
@@ -668,11 +656,7 @@ function openPhotoModal(element) {
     
     // Mettre à jour le type avec badge
     const photoTypeElement = document.getElementById('photoType');
-    if (type === 'effet') {
-        photoTypeElement.innerHTML = '<span class="badge bg-warning text-dark"><i class="fas fa-magic me-1"></i>Effet IA</span>';
-    } else {
-        photoTypeElement.innerHTML = '<span class="badge bg-primary"><i class="fas fa-camera me-1"></i>Original</span>';
-    }
+    photoTypeElement.innerHTML = '<span class="badge bg-primary"><i class="fas fa-camera me-1"></i>Photo</span>';
     
     // Configurer les boutons d'action
     document.getElementById('downloadBtn').onclick = function() {

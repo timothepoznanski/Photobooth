@@ -13,8 +13,6 @@ DEFAULT_CONFIG = {
     'slideshow_enabled': False,
     'slideshow_delay': 60,
     'slideshow_source': 'photos',
-
-
     'camera_type': 'picamera',
     'usb_camera_id': 0,
     'printer_enabled': True,

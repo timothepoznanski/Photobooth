@@ -157,8 +157,7 @@ SimpleBooth/
 │   ├── review.html        # Page de prévisualisation et d'action post-capture
 │   ├── admin.html         # Panneau d'administration
 │   └── base.html          # Template de base commun
-├── photos/                # Dossier pour les photos originales (créé au lancement)
-├── effet/                 # Dossier pour les photos avec effets (créé au lancement)
+├── photos/                # Dossier pour les photos (créé au lancement)
 └── config.json            # Fichier de configuration (créé au lancement)
 ```
 
@@ -174,16 +173,9 @@ La configuration est sauvegardée dans `config.json` :
 ### Diaporama
 - `slideshow_enabled` : Activer/désactiver le diaporama automatique
 - `slideshow_delay` : Délai d'inactivité avant affichage du diaporama (10-300 secondes)
-- `slideshow_source` : Source des photos pour le diaporama ('photos' ou 'effet')
-
-### Effets IA
-- `effect_enabled` : Activer/désactiver les effets IA
-- `effect_prompt` : Description textuelle de l'effet IA souhaité
-- `effect_steps` : Nombre d'étapes de génération IA (1-50, plus = meilleure qualité mais plus lent)
-- `runware_api_key` : Clé API Runware pour l'accès au service IA
+- `slideshow_source` : Source des photos pour le diaporama
 
 ## Dépannage
 
 - **Caméra non détectée** : Vérifier que la caméra est activée dans `raspi-config`
 - **Erreur d'impression** : Vérifier la connexion de l'imprimante thermique et TX/RX
-- **Dossier effet manquant** : L'application le crée automatiquement au démarrage
