@@ -30,7 +30,7 @@
         background-repeat: unset !important;
     }
     
-    /* Style simple pour tous les écrans */
+    /* Style unique simple pour tous les écrans */
     .photo-item {
         display: flex;
         align-items: center;
@@ -102,13 +102,11 @@
                                    title="Télécharger">
                                     <i class="fas fa-download"></i>
                                 </a>
-                                {% if config.get('printer_enabled', True) %}
                                 <button onclick="reprintPhoto('{{ photo.filename }}')" 
                                         class="btn btn-outline-success" 
                                         title="Imprimer">
                                     <i class="fas fa-print"></i>
                                 </button>
-                                {% endif %}
                                 <button onclick="deletePhoto('{{ photo.filename }}')" 
                                         class="btn btn-outline-danger" 
                                         title="Supprimer">
@@ -121,13 +119,63 @@
                         <div class="alert alert-info" role="alert">
                             <i class="fas fa-info-circle"></i> Aucune photo disponible.
                         </div>
-                    {% endif %}
+                    {% endif %}        <!-- Version mobile avec cartes -->
+        {% if photos %}
+            <div class="mobile-cards">
+                {% for photo in photos %}
+                <div class="photo-card mb-3 p-3 rounded">
+                    <div>
+                        <div class="row align-items-center">
+                            <div class="col-3">
+                                <img src="{{ url_for('serve_photo', filename=photo.filename) }}" 
+                                     alt="{{ photo.filename }}" 
+                                     class="photo-preview">
+                            </div>
+                            <div class="col-5">
+                                <div class="photo-info">
+                                    <div class="photo-filename text-primary">{{ photo.filename }}</div>
+                                    <small class="text-muted d-block">{{ photo.date }}</small>
+                                    <small class="text-muted d-block">{{ "%.1f"|format(photo.size_kb) }} KB</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <img src="{{ url_for('serve_photo', filename=photo.filename) }}" 
+                                 alt="{{ photo.filename }}" 
+                                 class="photo-preview">
+                        </div>
+                        <div class="photo-actions d-flex gap-2">
+                            <a href="{{ url_for('download_photo', filename=photo.filename) }}" 
+                               class="btn btn-sm btn-outline-primary" 
+                               title="Télécharger">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <button onclick="reprintPhoto('{{ photo.filename }}')" 
+                                    class="btn btn-sm btn-outline-success" 
+                                    title="Imprimer">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button onclick="deletePhoto('{{ photo.filename }}')" 
+                                    class="btn btn-sm btn-outline-danger" 
+                                    title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                            </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
-</div>
+
+
 {% endblock %}
 
 {% block scripts %}
@@ -135,6 +183,7 @@
 // Fonction pour supprimer une photo individuelle
 function deletePhoto(filename) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette photo ?')) {
+        // Envoyer une requête DELETE ou POST selon votre API
         fetch(`/admin/delete_photo/${filename}`, {
             method: 'POST',
             headers: {
@@ -144,7 +193,7 @@ function deletePhoto(filename) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                location.reload();
+                location.reload(); // Recharger la page
             } else {
                 alert('Erreur lors de la suppression : ' + (data.error || 'Erreur inconnue'));
             }
@@ -173,6 +222,7 @@ function reprintPhoto(filename) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Afficher un message de succès temporaire
             btn.innerHTML = '<i class="fas fa-check text-success"></i>';
             setTimeout(() => {
                 btn.innerHTML = originalContent;

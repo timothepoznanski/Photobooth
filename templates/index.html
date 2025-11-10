@@ -212,6 +212,7 @@ let slideshowPhotos = [];
 let slideshowActive = false;
 let slideshowIndex = 0;
 let slideshowInterval = null;
+let slideshowRefreshInterval = null;
 
 let inactivityTimer = null;
 let lastActivity = Date.now();
@@ -220,16 +221,33 @@ let lastActivity = Date.now();
 document.addEventListener('DOMContentLoaded', function() {
     loadSlideshowConfig();
     setupActivityTracking();
+    startSlideshowRefresh();
 });
 
 async function loadSlideshowConfig() {
     try {
         const response = await fetch('/api/slideshow');
-        slideshowConfig = await response.json();
+        const newConfig = await response.json();
         
-        if (slideshowConfig.enabled && slideshowConfig.photos.length > 0) {
-            slideshowPhotos = slideshowConfig.photos;
-            startInactivityTimer();
+        // Vérifier si la liste des photos a changé
+        const photosChanged = !slideshowPhotos || 
+                             JSON.stringify(slideshowPhotos) !== JSON.stringify(newConfig.photos);
+        
+        slideshowConfig = newConfig;
+        
+        if (photosChanged) {
+            console.log('Liste des photos mise à jour:', newConfig.photos);
+            slideshowPhotos = newConfig.photos;
+            
+            // Si le diaporama est actif et qu'il n'y a plus de photos, l'arrêter
+            if (slideshowActive && slideshowPhotos.length === 0) {
+                stopSlideshow();
+            }
+            
+            // Redémarrer le timer d'inactivité si nécessaire
+            if (slideshowConfig.enabled && slideshowPhotos.length > 0 && !slideshowActive) {
+                startInactivityTimer();
+            }
         }
     } catch (error) {
         console.error('Erreur chargement config diaporama:', error);
@@ -241,6 +259,17 @@ function setupActivityTracking() {
     ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {
         document.addEventListener(event, resetInactivityTimer, true);
     });
+}
+
+function startSlideshowRefresh() {
+    // Rafraîchir la liste des photos toutes les 30 secondes
+    if (slideshowRefreshInterval) {
+        clearInterval(slideshowRefreshInterval);
+    }
+    
+    slideshowRefreshInterval = setInterval(() => {
+        loadSlideshowConfig();
+    }, 30000); // 30 secondes
 }
 
 function resetInactivityTimer() {

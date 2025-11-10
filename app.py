@@ -328,7 +328,8 @@ def photos_page():
     
     return render_template('photos.html', 
                            photos=photos,
-                           photo_count=photo_count)
+                           photo_count=photo_count,
+                           config=config)
 
 @app.route('/admin')
 def admin():
