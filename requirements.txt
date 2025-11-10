@@ -43,10 +43,6 @@ certifi>=2023.0.0
 charset-normalizer>=3.3.0
 idna>=3.4
 
-# === AI/ML (optionnel) ===
-# Runware API
-runware>=0.4.0
-
 # === SYSTEM UTILITIES ===
 # Gestion des processus
 psutil>=5.9.0

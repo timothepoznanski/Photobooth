@@ -3,7 +3,6 @@ import json
 import logging
 
 PHOTOS_FOLDER = 'photos'
-EFFECT_FOLDER = 'effet'
 CONFIG_FILE = 'config.json'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
@@ -14,10 +13,7 @@ DEFAULT_CONFIG = {
     'slideshow_enabled': False,
     'slideshow_delay': 60,
     'slideshow_source': 'photos',
-    'effect_enabled': False,
-    'effect_prompt': 'Transform this photo into a beautiful ghibli style',
-    'effect_steps': 5,
-    'runware_api_key': '',
+
     'telegram_enabled': False,
     'telegram_bot_token': '',
     'telegram_chat_id': '',
@@ -33,14 +29,10 @@ DEFAULT_CONFIG = {
 logger = logging.getLogger(__name__)
 
 def ensure_directories():
-    """Create photos and effect folders if missing"""
+    """Create photos folder if missing"""
     logger.info(f"[DEBUG] Création du dossier photos: {PHOTOS_FOLDER}")
     os.makedirs(PHOTOS_FOLDER, exist_ok=True)
-    logger.info(f"[DEBUG] Création du dossier effet: {EFFECT_FOLDER}")
-    os.makedirs(EFFECT_FOLDER, exist_ok=True)
-    logger.info(
-        f"[DEBUG] Dossiers créés - Photos: {os.path.exists(PHOTOS_FOLDER)}, Effet: {os.path.exists(EFFECT_FOLDER)}"
-    )
+    logger.info(f"[DEBUG] Dossier créé - Photos: {os.path.exists(PHOTOS_FOLDER)}")
 
 def load_config():
     """Load configuration from JSON"""

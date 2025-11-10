@@ -62,13 +62,6 @@
     <!-- Conteneur pour les boutons d'action -->
     <div class="action-buttons">
         <div class="row g-2 g-md-3 justify-content-center">
-            {% if config.effect_enabled %}
-            <div class="col">
-                <button class="btn btn-warning w-100 btn-review" onclick="applyEffect()">
-                    <i class="fas fa-magic"></i>
-                    <span>Effet</span>
-                </button>
-            </div>
             {% if config.printer_enabled %}
             <div class="col">
                 <button class="btn btn-success w-100 btn-review" onclick="printPhoto()">
@@ -89,41 +82,6 @@
                     <span>Supprimer</span>
                 </button>
             </div>
-            {% else %}
-            {% if config.printer_enabled %}
-                <div class="col-4">
-                    <button class="btn btn-success w-100 btn-review" onclick="printPhoto()">
-                        <i class="fas fa-print"></i>
-                        <span>Imprimer</span>
-                    </button>
-                </div>
-                <div class="col-4">
-                    <a href="{{ url_for('index') }}" class="btn btn-primary w-100 btn-review">
-                        <i class="fas fa-redo"></i>
-                        <span>Reprendre</span>
-                    </a>
-                </div>
-                <div class="col-4">
-                    <button class="btn btn-danger w-100 btn-review" onclick="deletePhoto()">
-                        <i class="fas fa-trash"></i>
-                        <span>Supprimer</span>
-                    </button>
-                </div>
-            {% else %}
-                <div class="col-6">
-                    <a href="{{ url_for('index') }}" class="btn btn-primary w-100 btn-review">
-                        <i class="fas fa-redo"></i>
-                        <span>Reprendre</span>
-                    </a>
-                </div>
-                <div class="col-6">
-                    <button class="btn btn-danger w-100 btn-review" onclick="deletePhoto()">
-                        <i class="fas fa-trash"></i>
-                        <span>Supprimer</span>
-                    </button>
-                </div>
-            {% endif %}
-            {% endif %}
         </div>
     </div>
 </div>
@@ -139,16 +97,6 @@
     </div>
 </div>
 
-<!-- Overlay d'effet IA en plein écran -->
-<div id="effectOverlay" class="d-none" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-    <div class="text-center text-white">
-        <div class="mb-4">
-            <i class="fas fa-magic fa-spin" style="font-size: 4rem; color: #ffc107;"></i>
-        </div>
-        <h2 class="mb-3">Application de l'effet IA...</h2>
-        <p class="mb-0">Transformation en cours, veuillez patienter</p>
-    </div>
-</div>
 
 <!-- Modale de confirmation de suppression -->
 <div class="modal fade" id="deletePhotoModal" tabindex="-1" aria-labelledby="deletePhotoModalLabel" aria-hidden="true">
@@ -308,72 +256,6 @@ async function confirmDeletePhoto() {
     }
 }
 
-async function applyEffect() {
-    const effectBtn = event.target;
-    const originalContent = effectBtn.innerHTML;
-    const overlay = document.getElementById('effectOverlay');
-    
-    // Désactiver le bouton et afficher l'overlay
-    effectBtn.disabled = true;
-    effectBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement...';
-    overlay.classList.remove('d-none');
-    overlay.style.display = 'flex';
-    
-    try {
-        const response = await fetch('/apply_effect', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            // Succès de l'effet - modifier le contenu de l'overlay
-            overlay.innerHTML = 
-                '<div class="text-center text-white">' +
-                '<div class="mb-4">' +
-                '<i class="fas fa-check-circle" style="font-size: 4rem; color: #28a745;"></i>' +
-                '</div>' +
-                '<h2 class="mb-3">Effet appliqué avec succès !</h2>' +
-                '<p class="mb-0">Rechargement de la page...</p>' +
-                '</div>';
-            
-            // Recharger la page après 2 secondes pour afficher la nouvelle image
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-            
-        } else {
-            throw new Error(result.error || 'Erreur lors de l\'application de l\'effet');
-        }
-        
-    } catch (error) {
-        console.error('Erreur lors de l\'application de l\'effet:', error);
-        
-        // Afficher l'erreur dans l'overlay
-        overlay.innerHTML = 
-            '<div class="text-center text-white">' +
-            '<div class="mb-4">' +
-            '<i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #dc3545;"></i>' +
-            '</div>' +
-            '<h2 class="mb-3">Erreur d\'effet IA</h2>' +
-            '<p class="mb-3">' + error.message + '</p>' +
-            '<button class="btn btn-light" onclick="closeEffectOverlay()">Fermer</button>' +
-            '</div>';
-        
-        // Réactiver le bouton
-        effectBtn.disabled = false;
-        effectBtn.innerHTML = originalContent;
-    }
-}
-
-function closeEffectOverlay() {
-    const overlay = document.getElementById('effectOverlay');
-    overlay.classList.add('d-none');
-    overlay.style.display = 'none';
-}
 
 
 </script>

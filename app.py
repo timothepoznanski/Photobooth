@@ -6,18 +6,14 @@ import os
 import time
 import subprocess
 import threading
-import asyncio
 import requests
 import logging
 import signal
 import atexit
-import base64
 import sys
 from datetime import datetime
-from runware import Runware, IImageInference
 from config_utils import (
     PHOTOS_FOLDER,
-    EFFECT_FOLDER,
     load_config,
     save_config,
     ensure_directories,
@@ -242,13 +238,9 @@ def print_photo():
         if not config.get('printer_enabled', True):
             return jsonify({'success': False, 'error': 'Imprimante désactivée dans la configuration'})
         
-        # Chercher la photo dans le bon dossier
-        photo_path = None
-        if os.path.exists(os.path.join(PHOTOS_FOLDER, current_photo)):
-            photo_path = os.path.join(PHOTOS_FOLDER, current_photo)
-        elif os.path.exists(os.path.join(EFFECT_FOLDER, current_photo)):
-            photo_path = os.path.join(EFFECT_FOLDER, current_photo)
-        else:
+        # Chercher la photo dans le dossier photos
+        photo_path = os.path.join(PHOTOS_FOLDER, current_photo)
+        if not os.path.exists(photo_path):
             return jsonify({'success': False, 'error': 'Photo introuvable'})
         
         # Vérifier l'existence du script d'impression
@@ -299,14 +291,10 @@ def delete_current_photo():
     
     if current_photo:
         try:
-            # Chercher la photo dans le bon dossier
-            photo_path = None
-            if os.path.exists(os.path.join(PHOTOS_FOLDER, current_photo)):
-                photo_path = os.path.join(PHOTOS_FOLDER, current_photo)
-            elif os.path.exists(os.path.join(EFFECT_FOLDER, current_photo)):
-                photo_path = os.path.join(EFFECT_FOLDER, current_photo)
+            # Chercher la photo dans le dossier photos
+            photo_path = os.path.join(PHOTOS_FOLDER, current_photo)
             
-            if photo_path and os.path.exists(photo_path):
+            if os.path.exists(photo_path):
                 os.remove(photo_path)
                 current_photo = None
                 return jsonify({'success': True})
@@ -317,146 +305,11 @@ def delete_current_photo():
     
     return jsonify({'success': False, 'error': 'Aucune photo à supprimer'})
 
-@app.route('/apply_effect', methods=['POST'])
-def apply_effect():
-    """Appliquer un effet IA à la photo actuelle"""
-    global current_photo
-    
-    if not current_photo:
-        return jsonify({'success': False, 'error': 'Aucune photo à traiter'})
-    
-    if not config.get('effect_enabled', False):
-        return jsonify({'success': False, 'error': 'Les effets sont désactivés'})
-    
-    if not config.get('runware_api_key'):
-        return jsonify({'success': False, 'error': 'Clé API Runware manquante'})
-    
-    try:
-        # Chemin de la photo actuelle
-        photo_path = os.path.join(PHOTOS_FOLDER, current_photo)
-        
-        if not os.path.exists(photo_path):
-            return jsonify({'success': False, 'error': 'Photo introuvable'})
-        
-        # Exécuter la fonction asynchrone
-        result = asyncio.run(apply_effect_async(photo_path))
-        return result
-            
-    except Exception as e:
-        logger.info(f"Erreur lors de l'application de l'effet: {e}")
-        return jsonify({'success': False, 'error': f'Erreur IA: {str(e)}'})
-
-async def apply_effect_async(photo_path):
-    """Fonction asynchrone pour appliquer l'effet IA"""
-    global current_photo
-    
-    try:
-        logger.info("[DEBUG IA] Début de l'application de l'effet IA")
-        logger.info(f"[DEBUG IA] Photo source: {photo_path}")
-        logger.info(f"[DEBUG IA] Clé API configurée: {'Oui' if config.get('runware_api_key') else 'Non'}")
-        logger.info(f"[DEBUG IA] Prompt: {config.get('effect_prompt', 'Transform this photo into a beautiful ghibli style')}")
-        
-        # Initialiser Runware
-        logger.info("[DEBUG IA] Initialisation de Runware...")
-        runware = Runware(api_key=config['runware_api_key'])
-        logger.info("[DEBUG IA] Connexion à Runware...")
-        await runware.connect()
-        logger.info("[DEBUG IA] Connexion établie avec succès")
-        
-        # Lire et encoder l'image en base64
-        logger.info("[DEBUG IA] Lecture et encodage de l'image...")
-        with open(photo_path, 'rb') as img_file:
-            img_data = img_file.read()
-            img_base64 = base64.b64encode(img_data).decode('utf-8')
-        logger.info(f"[DEBUG IA] Image encodée: {len(img_base64)} caractères base64")
-        
-        # Préparer la requête d'inférence avec referenceImages (requis pour ce modèle)
-        logger.info("[DEBUG IA] Préparation de la requête d'inférence avec referenceImages...")
-        request = IImageInference(
-            positivePrompt=config.get('effect_prompt', 'Transforme cette image en illustration de style Studio Ghibli'),
-            referenceImages=[f"data:image/jpeg;base64,{img_base64}"],
-            model="runware:106@1",
-            height=752, 
-            width=1392,  
-            steps=config.get('effect_steps', 5),
-            CFGScale=2.5,
-            numberResults=1
-        )
-        logger.info("[DEBUG IA] Requête préparée avec les paramètres de base:")
-        logger.info(f"[DEBUG IA]   - Modèle: runware:106@1")
-        logger.info(f"[DEBUG IA]   - Dimensions: 1392x752")
-        logger.info(f"[DEBUG IA]   - Étapes: {config.get('effect_steps', 5)}")
-        logger.info(f"[DEBUG IA]   - CFG Scale: 2.5")
-        logger.info(f"[DEBUG IA]   - Nombre de résultats: 1")
-        
-        # Appliquer l'effet
-        logger.info("[DEBUG IA] Envoi de la requête à l'API Runware...")
-        # La méthode correcte est imageInference
-        images = await runware.imageInference(requestImage=request)
-        logger.info(f"[DEBUG IA] Réponse reçue: {len(images) if images else 0} image(s) générée(s)")
-        
-        if images and len(images) > 0:
-            # Télécharger l'image transformée
-            logger.info(f"[DEBUG IA] URL de l'image générée: {images[0].imageURL}")
-            logger.info("[DEBUG IA] Téléchargement de l'image transformée...")
-            import requests
-            response = requests.get(images[0].imageURL)
-            logger.info(f"[DEBUG IA] Statut de téléchargement: {response.status_code}")
-            
-            if response.status_code == 200:
-                logger.info(f"[DEBUG IA] Taille de l'image téléchargée: {len(response.content)} bytes")
-                
-                # S'assurer que le dossier effet existe
-                logger.info(f"[DEBUG IA] Vérification du dossier effet: {EFFECT_FOLDER}")
-                os.makedirs(EFFECT_FOLDER, exist_ok=True)
-                logger.info(f"[DEBUG IA] Dossier effet existe: {os.path.exists(EFFECT_FOLDER)}")
-                
-                # Créer un nouveau nom de fichier pour l'image avec effet
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                effect_filename = f'effect_{timestamp}.jpg'
-                effect_path = os.path.join(EFFECT_FOLDER, effect_filename)
-                logger.info(f"[DEBUG IA] Sauvegarde vers: {effect_path}")
-                
-                # Sauvegarder l'image avec effet
-                with open(effect_path, 'wb') as f:
-                    f.write(response.content)
-                logger.info("[DEBUG IA] Image sauvegardée avec succès")
-                
-                # Mettre à jour la photo actuelle
-                current_photo = effect_filename
-                logger.info(f"[DEBUG IA] Photo actuelle mise à jour: {current_photo}")
-                logger.info("[DEBUG IA] Effet appliqué avec succès!")
-                
-                # Envoyer sur Telegram si activé
-                send_type = config.get('telegram_send_type', 'photos')
-                if send_type in ['effet', 'both']:
-                    threading.Thread(target=send_to_telegram, args=(effect_path, config, "effet")).start()
-                
-                return jsonify({
-                    'success': True, 
-                    'message': 'Effet appliqué avec succès!',
-                    'new_filename': effect_filename
-                })
-            else:
-                logger.info(f"[DEBUG IA] ERREUR: Échec du téléchargement (code {response.status_code})")
-                return jsonify({'success': False, 'error': 'Erreur lors du téléchargement de l\'image transformée'})
-        else:
-            logger.info("[DEBUG IA] ERREUR: Aucune image générée par l'IA")
-            return jsonify({'success': False, 'error': 'Aucune image générée par l\'IA'})
-            
-    except Exception as e:
-        logger.info(f"Erreur lors de l'application de l'effet: {e}")
-        return jsonify({'success': False, 'error': f'Erreur IA: {str(e)}'})
-
 @app.route('/admin')
 def admin():
     # Vérifier si le dossier photos existe
     if not os.path.exists(PHOTOS_FOLDER):
         os.makedirs(PHOTOS_FOLDER)
-    
-    # Vérifier si le dossier effet existe
-    if not os.path.exists(EFFECT_FOLDER):
-        os.makedirs(EFFECT_FOLDER)
     
     # Récupérer la liste des photos avec leurs métadonnées
     photos = []
@@ -477,28 +330,11 @@ def admin():
                     'folder': PHOTOS_FOLDER
                 })
     
-    # Récupérer les photos du dossier EFFECT_FOLDER
-    if os.path.exists(EFFECT_FOLDER):
-        for filename in os.listdir(EFFECT_FOLDER):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                file_path = os.path.join(EFFECT_FOLDER, filename)
-                file_size_kb = os.path.getsize(file_path) / 1024  # Taille en KB
-                file_date = datetime.fromtimestamp(os.path.getmtime(file_path))
-                
-                photos.append({
-                    'filename': filename,
-                    'size_kb': file_size_kb,
-                    'date': file_date.strftime("%d/%m/%Y %H:%M"),
-                    'type': 'effet',
-                    'folder': EFFECT_FOLDER
-                })
-    
     # Trier les photos par date (plus récentes en premier)
     photos.sort(key=lambda x: datetime.strptime(x['date'], "%d/%m/%Y %H:%M"), reverse=True)
     
-    # Compter les photos de chaque type
-    photo_count = sum(1 for p in photos if p['type'] == 'photo')
-    effect_count = sum(1 for p in photos if p['type'] == 'effet')
+    # Compter les photos
+    photo_count = len(photos)
     
     # Détecter les caméras USB disponibles
     available_cameras = detect_cameras()
@@ -513,7 +349,6 @@ def admin():
                            config=config, 
                            photos=photos,
                            photo_count=photo_count,
-                           effect_count=effect_count,
                            available_cameras=available_cameras,
                            available_serial_ports=available_serial_ports,
                            show_toast=request.args.get('show_toast', False))
@@ -537,13 +372,6 @@ def save_admin_config():
         config['slideshow_delay'] = int(slideshow_delay) if slideshow_delay else 60
         
         config['slideshow_source'] = request.form.get('slideshow_source', 'photos')
-        config['effect_enabled'] = 'effect_enabled' in request.form
-        config['effect_prompt'] = request.form.get('effect_prompt', '')
-        
-        effect_steps = request.form.get('effect_steps', '5').strip()
-        config['effect_steps'] = int(effect_steps) if effect_steps else 5
-        
-        config['runware_api_key'] = request.form.get('runware_api_key', '')
         config['telegram_enabled'] = 'telegram_enabled' in request.form
         config['telegram_bot_token'] = request.form.get('telegram_bot_token', '')
         config['telegram_chat_id'] = request.form.get('telegram_chat_id', '')
@@ -590,18 +418,11 @@ def delete_all_photos():
     try:
         deleted_count = 0
         
-        # Supprimer les photos normales
+        # Supprimer toutes les photos
         if os.path.exists(PHOTOS_FOLDER):
             for filename in os.listdir(PHOTOS_FOLDER):
                 if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
                     os.remove(os.path.join(PHOTOS_FOLDER, filename))
-                    deleted_count += 1
-        
-        # Supprimer les photos avec effet
-        if os.path.exists(EFFECT_FOLDER):
-            for filename in os.listdir(EFFECT_FOLDER):
-                if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    os.remove(os.path.join(EFFECT_FOLDER, filename))
                     deleted_count += 1
         
         flash(f'{deleted_count} photo(s) supprimée(s) avec succès!', 'success')
@@ -614,11 +435,9 @@ def delete_all_photos():
 def download_photo(filename):
     """Télécharger une photo spécifique"""
     try:
-        # Chercher la photo dans les deux dossiers
+        # Chercher la photo dans le dossier photos
         if os.path.exists(os.path.join(PHOTOS_FOLDER, filename)):
             return send_from_directory(PHOTOS_FOLDER, filename, as_attachment=True)
-        elif os.path.exists(os.path.join(EFFECT_FOLDER, filename)):
-            return send_from_directory(EFFECT_FOLDER, filename, as_attachment=True)
         else:
             flash('Photo introuvable', 'error')
             return redirect(url_for('admin'))

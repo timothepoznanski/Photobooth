@@ -233,88 +233,8 @@
                             </label>
                             <select class="form-select" id="slideshow_source" name="slideshow_source">
                                 <option value="photos" {{ 'selected' if config.slideshow_source == 'photos' else '' }}>Photos originales</option>
-                                <option value="effet" {{ 'selected' if config.slideshow_source == 'effet' else '' }}>Photos avec effet IA</option>
                             </select>
                             <div class="form-text">Choisir le dossier source pour le diaporama</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Configuration Effets IA -->
-        <div class="card mb-4">
-            <div class="card-header bg-warning text-dark">
-                <h3 class="mb-0"><i class="fas fa-magic me-2"></i>Configuration Effets IA</h3>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-toggle-on me-2 text-warning"></i>Activation des effets
-                            </label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       id="effect_enabled" 
-                                       name="effect_enabled"
-                                       {{ 'checked' if config.effect_enabled else '' }}>
-                                <label class="form-check-label" for="effect_enabled">
-                                    Activer le bouton d'effets IA sur les photos
-                                </label>
-                            </div>
-                            <div class="form-text">Permet d'appliquer des effets artistiques aux photos capturées</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="effect_prompt" class="form-label fw-bold">
-                                <i class="fas fa-wand-magic-sparkles me-2 text-warning"></i>Prompt d'effet
-                            </label>
-                            <textarea class="form-control" 
-                                      id="effect_prompt" 
-                                      name="effect_prompt" 
-                                      rows="3"
-                                      placeholder="Ex: Transform this photo into a beautiful artistic painting with vibrant colors">{{ config.effect_prompt }}</textarea>
-                            <div class="form-text">Description de l'effet à appliquer (en anglais)</div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="runware_api_key" class="form-label fw-bold">
-                                <i class="fas fa-key me-2 text-warning"></i>Clé API Runware
-                            </label>
-                            <input type="password" 
-                                   class="form-control" 
-                                   id="runware_api_key" 
-                                   name="runware_api_key" 
-                                   value="{{ config.runware_api_key }}"
-                                   placeholder="Votre clé API Runware">
-                            <div class="form-text">Clé d'accès à l'API Runware pour les effets IA</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="effect_steps" class="form-label fw-bold">
-                                <i class="fas fa-stairs me-2 text-warning"></i>Nombre d'étapes IA
-                            </label>
-                            <input type="number" 
-                                   class="form-control" 
-                                   id="effect_steps" 
-                                   name="effect_steps" 
-                                   value="{{ config.effect_steps }}"
-                                   min="1" 
-                                   max="50"
-                                   placeholder="5">
-                            <div class="form-text">Nombre d'étapes de génération (1-50, plus = meilleure qualité mais plus lent)</div>
                         </div>
                     </div>
                 </div>
