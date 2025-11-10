@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Photos - SimpleBooth{% endblock %}
+
+{% block styles %}
+<style>
+    html, body {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        background-image: none !important;
+    }
+    
+    body::before, body::after {
+        display: none !important;
+    }
+    
+    .photos-page {
+        background: #ffffff !important;
+        min-height: 100vh;
+    }
+    
+    /* Force le fond blanc avec la plus haute spécificité possible */
+    html body.white-bg {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        background-image: none !important;
+        background-attachment: unset !important;
+        background-size: unset !important;
+        background-position: unset !important;
+        background-repeat: unset !important;
+    }
+</style>
+<script>
+    // Force le fond blanc dès le chargement
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('white-bg');
+        document.body.style.background = '#ffffff';
+        document.body.style.backgroundImage = 'none';
+        document.body.style.backgroundColor = '#ffffff';
+        document.documentElement.style.background = '#ffffff';
+        document.documentElement.style.backgroundColor = '#ffffff';
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="photos-page">
+<div class="container-fluid mt-4">
+    <!-- Liste des photos -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-photo-video me-2 text-info"></i>Photos capturées
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if photos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" style="width: 80px;">Aperçu</th>
+                                    <th scope="col">Nom du fichier</th>
+                                    <th scope="col">Date</th>
+                                    <th scope="col">Taille</th>
+                                    <th scope="col" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for photo in photos %}
+                                <tr>
+                                    <td>
+                                        <img src="{{ url_for('serve_photo', filename=photo.filename) }}" 
+                                             alt="{{ photo.filename }}" 
+                                             class="img-thumbnail"
+                                             style="width: 60px; height: 60px; object-fit: cover;">
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-medium">{{ photo.filename }}</span>
+                                            <small class="text-muted">{{ photo.type|title }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-nowrap">{{ photo.date }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ "%.1f"|format(photo.size_kb) }} KB</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group" role="group">
+                                            <!-- Télécharger -->
+                                            <a href="{{ url_for('download_photo', filename=photo.filename) }}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="Télécharger">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            
+                                            <!-- Imprimer -->
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-success" 
+                                                    onclick="reprintPhoto('{{ photo.filename }}')"
+                                                    title="Imprimer">
+                                                <i class="fas fa-print"></i>
+                                            </button>
+                                            
+                                            <!-- Supprimer -->
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    onclick="deletePhoto('{{ photo.filename }}')"
+                                                    title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune photo disponible</h5>
+                        <p class="text-muted">Prenez votre première photo avec le photobooth !</p>
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-camera me-2"></i>Aller au Photobooth
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Fonction pour supprimer une photo individuelle
+function deletePhoto(filename) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette photo ?')) {
+        // Envoyer une requête DELETE ou POST selon votre API
+        fetch(`/admin/delete_photo/${filename}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload(); // Recharger la page
+            } else {
+                alert('Erreur lors de la suppression : ' + (data.error || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression');
+        });
+    }
+}
+
+// Fonction pour réimprimer une photo
+function reprintPhoto(filename) {
+    const btn = event.target.closest('button');
+    const originalContent = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    fetch(`/admin/reprint_photo/${filename}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Afficher un message de succès temporaire
+            btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }, 2000);
+        } else {
+            alert('Erreur lors de l\'impression : ' + (data.error || 'Erreur inconnue'));
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'impression');
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    });
+}
+</script>
+{% endblock %}
+</div>

@@ -294,6 +294,42 @@ def delete_current_photo():
     
     return jsonify({'success': False, 'error': 'Aucune photo à supprimer'})
 
+@app.route('/photos')
+def photos_page():
+    """Page dédiée à la gestion des photos"""
+    # Vérifier si le dossier photos existe
+    if not os.path.exists(PHOTOS_FOLDER):
+        os.makedirs(PHOTOS_FOLDER)
+    
+    # Récupérer la liste des photos avec leurs métadonnées
+    photos = []
+    
+    # Récupérer les photos du dossier PHOTOS_FOLDER
+    if os.path.exists(PHOTOS_FOLDER):
+        for filename in os.listdir(PHOTOS_FOLDER):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                file_path = os.path.join(PHOTOS_FOLDER, filename)
+                file_size_kb = os.path.getsize(file_path) / 1024  # Taille en KB
+                file_date = datetime.fromtimestamp(os.path.getmtime(file_path))
+                
+                photos.append({
+                    'filename': filename,
+                    'size_kb': file_size_kb,
+                    'date': file_date.strftime("%d/%m/%Y %H:%M"),
+                    'type': 'photo',
+                    'folder': PHOTOS_FOLDER
+                })
+    
+    # Trier les photos par date (plus récentes en premier)
+    photos.sort(key=lambda x: datetime.strptime(x['date'], "%d/%m/%Y %H:%M"), reverse=True)
+    
+    # Compter les photos
+    photo_count = len(photos)
+    
+    return render_template('photos.html', 
+                           photos=photos,
+                           photo_count=photo_count)
+
 @app.route('/admin')
 def admin():
     # Vérifier si le dossier photos existe
@@ -415,6 +451,19 @@ def delete_all_photos():
         flash(f'Erreur lors de la suppression: {str(e)}', 'error')
     
     return redirect(url_for('admin'))
+
+@app.route('/admin/delete_photo/<filename>', methods=['POST'])
+def delete_photo(filename):
+    """Supprimer une photo spécifique"""
+    try:
+        file_path = os.path.join(PHOTOS_FOLDER, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return jsonify({'success': True, 'message': 'Photo supprimée avec succès'})
+        else:
+            return jsonify({'success': False, 'error': 'Photo introuvable'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/admin/download_photo/<filename>')
 def download_photo(filename):
