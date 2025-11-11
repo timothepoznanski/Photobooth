@@ -283,17 +283,19 @@
         if (!btn) return;
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (!confirm('Sortir du mode plein écran ?\n\nLa fenêtre sera réduite et vous pourrez accéder au bureau.')) return;
+            if (!confirm('Arrêter complètement SimpleBooth ?\n\nPour redémarrer, utilisez sudo reboot.')) return;
 
-            // Sortir du mode plein écran
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-            
-            // Message d'information après un délai
-            setTimeout(function() {
-                alert('Mode plein écran désactivé.\n\nPour l\'administration: http://localhost:5000/admin');
-            }, 500);
+            // Appeler l'API pour arrêter complètement l'application
+            fetch('/admin/shutdown', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(function(response) {
+                // L'application va s'arrêter, pas besoin de faire autre chose
+            })
+            .catch(function() {
+                // En cas d'erreur, ne rien faire de spécial
+            });
         });
     });
     </script>
