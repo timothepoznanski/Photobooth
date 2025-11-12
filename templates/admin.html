@@ -373,11 +373,6 @@
                                 <i class="fas fa-power-off me-2"></i>
                                 Arrêter SimpleBooth
                             </button>
-                            
-                            <button type="button" class="btn btn-success btn-lg" onclick="restartApplication()">
-                                <i class="fas fa-sync-alt me-2"></i>
-                                Redémarrer l'Application
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -977,35 +972,6 @@ function updatePrinterStatus(data) {
                 ''}
         </div>
     `;
-}
-
-// Fonction pour redémarrer complètement l'application
-function restartApplication() {
-    if (!confirm('Redémarrer SimpleBooth ?\n\nCela va arrêter puis relancer l\'application en plein écran.')) {
-        return;
-    }
-    
-    // Appel API pour redémarrer
-    fetch('/admin/kiosk_control', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({action: 'restart'})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Afficher un message de succès
-            alert('✅ SimpleBooth redémarré !\n\nL\'application apparaît maintenant à l\'écran.');
-        } else {
-            throw new Error(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Erreur lors du redémarrage:', error);
-        alert('❌ Erreur lors du redémarrage: ' + (error.message || error));
-    });
 }
 
 function shutdownApplication() {
