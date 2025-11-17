@@ -253,11 +253,7 @@
                                     </td>
                                     <td>{{ photo.date }}</td>
                                     <td>{{ "%.1f"|format(photo.size_kb) }} KB</td>
-                                    <td>
-                                        <button class="btn btn-danger" onclick="deletePhoto('{{ photo.filename }}')" title="Supprimer" style="padding: 1px 5px; font-size: 0.7rem; line-height: 1;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
+                                    <td></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -349,21 +345,18 @@
             <div class="modal-footer">
                 <div class="row w-100 g-2">
                     <div class="col-4">
-                        <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>
-                            Fermer
+                        <button type="button" class="btn btn-danger w-100 py-3 rounded-4" id="deleteBtn" title="Supprimer">
+                            <i class="fas fa-trash fa-lg"></i>
                         </button>
                     </div>
                     <div class="col-4">
-                        <button type="button" class="btn btn-primary w-100" id="downloadBtn">
-                            <i class="fas fa-download me-2"></i>
-                            Télécharger
+                        <button type="button" class="btn btn-primary w-100 py-3 rounded-4" id="downloadBtn" title="Télécharger">
+                            <i class="fas fa-download fa-lg"></i>
                         </button>
                     </div>
                     <div class="col-4">
-                        <button type="button" class="btn btn-success w-100" id="reprintBtn">
-                            <i class="fas fa-print me-2"></i>
-                            Réimprimer
+                        <button type="button" class="btn btn-success w-100 py-3 rounded-4" id="reprintBtn" title="Réimprimer">
+                            <i class="fas fa-print fa-lg"></i>
                         </button>
                     </div>
                 </div>
@@ -492,6 +485,12 @@ function openPhotoModal(element) {
     // Configurer les boutons d'action
     document.getElementById('downloadBtn').onclick = function() {
         window.location.href = `{{ url_for('download_photo', filename='') }}${filename}`;
+    };
+    
+    document.getElementById('deleteBtn').onclick = function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('photoViewModal'));
+        modal.hide();
+        deletePhoto(filename);
     };
     
     document.getElementById('reprintBtn').onclick = function() {
