@@ -501,6 +501,11 @@ def reprint_photo(filename):
                 '--image', photo_path
             ]
             
+            # Ajouter les paramètres de port et baudrate
+            printer_port = config.get('printer_port', '/dev/ttyS0')
+            printer_baudrate = config.get('printer_baudrate', 9600)
+            cmd.extend(['--port', printer_port, '--baudrate', str(printer_baudrate)])
+            
             # Ajouter le texte de pied de page si défini
             footer_text = config.get('footer_text', '')
             if footer_text:
