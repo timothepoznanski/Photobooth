@@ -23,6 +23,7 @@ import logging
 import sys
 import argparse
 import os
+import time
 # Supprimer TOUS les avertissements et messages
 warnings.filterwarnings("ignore")
 logging.getLogger().setLevel(logging.CRITICAL)
@@ -97,14 +98,39 @@ def optimize_image(img_path, high_density=False):
     return img
 
 def print_image(printer, img, filename, high_density=False):
-    """Imprimer avec densité configurable"""
-    printer.image(
-        img,
-        impl='bitImageRaster',
-        high_density_vertical=high_density,
-        high_density_horizontal=high_density,
-        fragment_height=1920
-    )
+    """Imprimer avec densité configurable et gestion mémoire améliorée"""
+    # En mode HD, utiliser des fragments très petits et ajouter des délais
+    if high_density:
+        fragment_height = 128  # Fragments très petits en HD
+        
+        # Découper l'image manuellement en bandes pour mieux contrôler la mémoire
+        width, height = img.size
+        bands = []
+        for y in range(0, height, fragment_height):
+            band = img.crop((0, y, width, min(y + fragment_height, height)))
+            bands.append(band)
+        
+        # Imprimer chaque bande avec un délai
+        for i, band in enumerate(bands):
+            printer.image(
+                band,
+                impl='bitImageRaster',
+                high_density_vertical=True,
+                high_density_horizontal=True,
+                fragment_height=fragment_height
+            )
+            # Petit délai entre chaque bande pour laisser l'imprimante respirer
+            if i < len(bands) - 1:  # Pas de délai après la dernière bande
+                time.sleep(0.05)
+    else:
+        # Mode basse densité - fragments normaux, pas de problème
+        printer.image(
+            img,
+            impl='bitImageRaster',
+            high_density_vertical=False,
+            high_density_horizontal=False,
+            fragment_height=1920
+        )
 
 def print_text_bottom(printer, text):
     """Imprimer du texte en bas, pleine largeur"""

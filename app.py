@@ -163,8 +163,9 @@ def capture_photo():
                 'rpicam-still',
                 '-o', filepath,
                 '--timeout', '1000',
-                '--width', '2304',
-                '--height', '1296',
+                '--width', '1280',      # Résolution réduite pour éviter fichiers trop lourds
+                '--height', '720',       # Format 16:9 standard
+                '--quality', '75',       # Compression JPEG pour réduire la taille
                 '--nopreview'
             ]
             
@@ -242,6 +243,11 @@ def print_photo():
         footer_text = config.get('footer_text', '')
         if footer_text:
             cmd.extend(['--text', footer_text])
+
+        # Ajouter l'option haute résolution selon la configuration
+        print_resolution = config.get('print_resolution', 384)
+        if print_resolution > 384:
+            cmd.append('--hd')
         
         # Exécuter l'impression
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__)))
@@ -478,6 +484,11 @@ def reprint_photo(filename):
             if footer_text:
                 cmd.extend(['--text', footer_text])
             
+            # Ajouter l'option HD si la résolution est élevée
+            print_resolution = config.get('print_resolution', 384)
+            if print_resolution > 384:
+                cmd.append('--hd')
+
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__)))
             
             # Logger les détails
