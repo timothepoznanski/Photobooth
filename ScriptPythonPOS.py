@@ -39,13 +39,13 @@ def parse_arguments():
                        help='Chemin vers l\'image à imprimer (obligatoire)')
     parser.add_argument('--text', type=str,
                        help='Texte à ajouter sous l\'image')
-    parser.add_argument('--port', type=str, default='/dev/ttyAMA0',
-                       help='Port série de l\'imprimante (défaut: /dev/ttyAMA0)')
+    parser.add_argument('--port', type=str, default='/dev/ttyS0',
+                       help='Port série de l\'imprimante (défaut: /dev/ttyS0)')
     parser.add_argument('--baudrate', type=int, default=9600,
                        help='Baudrate de l\'imprimante (défaut: 9600)')
     return parser.parse_args()
 
-def connect_printer(serial_port='/dev/ttyAMA0', baudrate=9600):
+def connect_printer(serial_port='/dev/ttyS0', baudrate=9600):
     """Connexion à l'imprimante avec paramètres de vitesse"""
     printer = Serial(devfile=serial_port, baudrate=baudrate, timeout=1)
      
