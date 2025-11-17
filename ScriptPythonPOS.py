@@ -97,12 +97,13 @@ def optimize_image(img_path, high_density=False):
     return img
 
 def print_image(printer, img, filename, high_density=False):
-    """Imprimer avec bitImageRaster en basse densité"""
+    """Imprimer avec densité configurable"""
     printer.image(
         img,
         impl='bitImageRaster',
-        high_density_vertical=False,
-        high_density_horizontal=False
+        high_density_vertical=high_density,
+        high_density_horizontal=high_density,
+        fragment_height=1920
     )
 
 def print_text_bottom(printer, text):
