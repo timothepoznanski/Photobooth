@@ -12,7 +12,7 @@
 
 Cette application transforme votre Raspberry Pi en un photobooth professionnel avec :
 - **Flux vidéo temps réel** en MJPEG 1280x720 (16:9)
-- **Support multi-caméras** : Pi Camera ou caméra USB avec détection automatique
+- **Support caméra** : Pi Camera (caméras officielles Raspberry Pi)
 - **Interface tactile optimisée** pour écran 7 pouces
 - **Capture photo instantanée** directement depuis le flux vidéo
 - **Galerie de photos intégrée** avec gestion complète
@@ -28,7 +28,7 @@ Cette application transforme votre Raspberry Pi en un photobooth professionnel a
 
 - **Caméra** : 
   - Raspberry Pi Camera (v1, v2, v3, HQ) - Détection automatique
-  - Caméra USB standard (webcam) - Détection automatique des ports
+  <!-- USB camera support removed in this build. -->
 - **Écran tactile** : Écran 7 pouces recommandé
 - **Imprimante thermique Série** : Compatible avec détection automatique des ports série
 
@@ -104,21 +104,12 @@ L'application supporte deux types de caméras avec détection automatique :
 - Détection automatique de la caméra Pi
 - Compatible avec toutes les caméras officielles Raspberry Pi
 
-### Caméra USB
-
-- Utilise OpenCV (`cv2`) pour capturer le flux vidéo
-- Détection automatique des caméras USB disponibles
-- Interface de sélection dans l'administration
-- Compatible avec la plupart des webcams USB standard
-- Configuration automatique :
-  1. Les caméras USB sont détectées automatiquement
-  2. Sélection dans le menu déroulant de l'administration
-  3. Test de connexion en temps réel
+<!-- USB camera support removed in this build. Only Raspberry Pi camera supported. -->
 
 > **Note** : 
 > - La détection automatique facilite la configuration
 > - Les permissions sont gérées automatiquement par le script `setup.sh`
-> - Support du hot-plug (connexion à chaud) des caméras USB
+<!-- USB hot-plug support removed in this build -->
 
 ## 📂 Structure des fichiers
 
@@ -127,7 +118,7 @@ Le projet est organisé de manière modulaire pour une meilleure maintenance :
 ```
 SimpleBooth/
 ├── app.py                 # Application Flask principale (routes, logique)
-├── camera_utils.py        # Utilitaires pour la gestion des caméras (Pi Camera, USB)
+├── camera_utils.py        # Utilitaires pour la gestion des caméras (Pi Camera only)
 ├── config_utils.py        # Utilitaires pour charger/sauvegarder la configuration
 ├── ScriptPythonPOS.py     # Script autonome pour l'impression thermique
 ├── setup.sh               # Script d'installation automatisée pour Raspberry Pi
@@ -154,8 +145,8 @@ La configuration est sauvegardée dans `config.json` :
 - `timer_seconds` : Délai avant capture (1-10 secondes)
 
 ### Caméra
-- `camera_type` : Type de caméra (`picamera` ou `usb`)
-- `usb_camera_id` : ID de la caméra USB (0, 1, 2...)
+- `camera_type` : Type de caméra (`picamera`)
+<!-- usb_camera_id removed -->
 
 ### Impression
 - `printer_enabled` : Activer/désactiver l'impression
@@ -174,7 +165,7 @@ La configuration est sauvegardée dans `config.json` :
 - Métadonnées complètes (taille, date)
 
 ### Administration avancée
-- Détection automatique des caméras USB disponibles
+<!-- USB camera detection removed -->
 - Détection automatique des ports série
 - Contrôle du mode kiosk (arrêt/redémarrage)
 - Arrêt complet de l'application
@@ -190,4 +181,4 @@ La configuration est sauvegardée dans `config.json` :
 - **Caméra non détectée** : Vérifier que la caméra est activée dans `raspi-config`
 - **Erreur d'impression** : Utiliser la détection automatique des ports ou vérifier `/dev/ttyAMA0`
 - **Mode kiosk bloqué** : Accéder à `/admin` puis utiliser les contrôles système
-- **Caméra USB non reconnue** : Vérifier dans `/admin` la liste des caméras détectées
+- **Caméra non reconnue** : Vérifier que la caméra Pi est correctement connectée et activée dans `raspi-config`.

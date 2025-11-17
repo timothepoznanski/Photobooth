@@ -18,11 +18,11 @@ from config_utils import (
     save_config,
     ensure_directories,
 )
-from camera_utils import UsbCamera, detect_cameras
+# USB camera support removed. No need to import camera_utils.
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'photobooth_secret_key_2024')
-
+# USB camera support removed. No need to import camera_utils.
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,6 @@ config = load_config()
 current_photo = None
 camera_active = False
 camera_process = None
-usb_camera = None
 
 @app.route('/')
 def index():
@@ -188,7 +187,7 @@ def capture_photo():
                 logger.info(f"Erreur rpicam-still, fallback vers frame MJPEG: {e}")
                 # Fallback vers la méthode frame MJPEG
         
-        # Mode USB ou fallback - capturer la frame actuelle du flux MJPEG
+        # Fallback - capturer la frame actuelle du flux MJPEG
         with frame_lock:
             if last_frame is not None:
                 # Sauvegarder la frame directement
@@ -363,9 +362,6 @@ def admin():
     # Compter les photos
     photo_count = len(photos)
     
-    # Détecter les caméras USB disponibles
-    available_cameras = detect_cameras()
-    
     # Détecter les ports série disponibles
     available_serial_ports = detect_serial_ports()
     
@@ -376,7 +372,7 @@ def admin():
                            config=config, 
                            photos=photos,
                            photo_count=photo_count,
-                           available_cameras=available_cameras,
+                           
                            available_serial_ports=available_serial_ports,
                            show_toast=request.args.get('show_toast', False))
 
@@ -394,16 +390,8 @@ def save_admin_config():
         
         config['high_density'] = 'high_density' in request.form
         
-        # Configuration de la caméra
-        config['camera_type'] = request.form.get('camera_type', 'picamera')
-        
-        # Récupérer l'ID de la caméra USB sélectionnée
-        selected_camera = request.form.get('usb_camera_select', '0')
-        # L'ID est stocké comme premier caractère de la valeur
-        try:
-            config['usb_camera_id'] = int(selected_camera)
-        except ValueError:
-            config['usb_camera_id'] = 0
+        # Configuration de la caméra (Pi Camera uniquement)
+        config['camera_type'] = 'picamera'
         
         # Configuration de l'imprimante
         config['printer_enabled'] = 'printer_enabled' in request.form
@@ -559,8 +547,8 @@ def video_stream():
                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def generate_video_stream():
-    """Générer le flux vidéo MJPEG selon le type de caméra configuré"""
-    global camera_process, usb_camera, last_frame
+    """Générer le flux vidéo MJPEG selon le type de caméra configuré (Pi Camera only)"""
+    global camera_process, last_frame
     
     # Déterminer le type de caméra à utiliser
     camera_type = config.get('camera_type', 'picamera')
@@ -569,32 +557,8 @@ def generate_video_stream():
         # Arrêter tout processus caméra existant
         stop_camera_process()
         
-        # Utiliser la caméra USB si configurée
-        if camera_type == 'usb':
-            logger.info("[CAMERA] Démarrage de la caméra USB...")
-            camera_id = config.get('usb_camera_id', 0)
-            usb_camera = UsbCamera(camera_id=camera_id)
-            if not usb_camera.start():
-                raise Exception(f"Impossible de démarrer la caméra USB avec ID {camera_id}")
-            
-            # Générateur de frames pour la caméra USB
-            while True:
-                frame = usb_camera.get_frame()
-                if frame:
-                    # Stocker la frame pour capture instantanée
-                    with frame_lock:
-                        last_frame = frame
-                    
-                    # Envoyer la frame au navigateur
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n'
-                           b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n' +
-                           frame + b'\r\n')
-                else:
-                    time.sleep(0.03)  # Attendre si pas de frame disponible
-        
         # Utiliser la Pi Camera par défaut
-        else:
+        # (USB camera support removed, any non-picamera config falls back to picamera)
             logger.info("[CAMERA] Démarrage de la Pi Camera...")
             # Commande rpicam-vid pour flux MJPEG - résolution 16/9
             cmd = [
@@ -670,16 +634,8 @@ def generate_video_stream():
         stop_camera_process()
 
 def stop_camera_process():
-    """Arrêter proprement le processus caméra (Pi Camera ou USB)"""
-    global camera_process, usb_camera
-    
-    # Arrêter la caméra USB si active
-    if usb_camera:
-        try:
-            usb_camera.stop()
-        except Exception as e:
-            logger.info(f"[CAMERA] Erreur lors de l'arrêt de la caméra USB: {e}")
-        usb_camera = None
+    """Arrêter proprement le processus caméra (Pi Camera)"""
+    global camera_process
     
     # Arrêter le processus libcamera-vid si actif
     if camera_process:
@@ -802,5 +758,52 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
+def get_ip_address():
+    """Récupère l'adresse IP locale du Raspberry Pi"""
+    try:
+        # Essayer d'obtenir l'IP via socket
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+def print_startup_info():
+    """Imprimer les informations de démarrage sur l'imprimante thermique"""
+    try:
+        if not config.get('printer_enabled', True):
+            logger.info("[STARTUP] Imprimante désactivée, pas d'impression au démarrage")
+            return
+        
+        from escpos.printer import Serial
+        
+        printer_port = config.get('printer_port', '/dev/ttyS0')
+        printer_baudrate = config.get('printer_baudrate', 9600)
+        
+        printer = Serial(printer_port, baudrate=printer_baudrate, timeout=1)
+        
+        # Récupérer l'IP
+        ip_address = get_ip_address()
+        
+        # Imprimer le message de démarrage
+        printer.set(align='center')
+        printer.text("SimpleBooth")
+        printer.text("Demarrage\n")
+        printer.text(f"My IP address is\n{ip_address}\n")
+        printer.cut()
+        printer.close()
+        
+        logger.info(f"[STARTUP] Impression au démarrage réussie - IP: {ip_address}")
+        
+    except Exception as e:
+        logger.warning(f"[STARTUP] Erreur lors de l'impression au démarrage: {str(e)}")
+
 if __name__ == '__main__':
+    # Imprimer les infos de démarrage
+    # print_startup_info()
+    
+    # Démarrer l'application Flask
     app.run(host='0.0.0.0', port=5000, debug=True)

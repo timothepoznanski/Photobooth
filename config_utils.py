@@ -11,7 +11,6 @@ DEFAULT_CONFIG = {
     'timer_seconds': 3,
     'high_density': False,
     'camera_type': 'picamera',
-    'usb_camera_id': 0,
     'printer_enabled': True,
     'printer_port': '/dev/ttyAMA0',
     'printer_baudrate': 9600,
