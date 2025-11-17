@@ -4,15 +4,13 @@ After=graphical.target
 Wants=graphical.target
 
 [Service]
-Type=exec
+Type=simple
 User=admin
 Group=admin
 Environment=DISPLAY=:0
 Environment=HOME=/home/admin
 ExecStart=/home/admin/start_simplebooth.sh
-Restart=always
-RestartSec=3
-TimeoutStartSec=60
+Restart=no
 
 [Install]
 WantedBy=graphical.target
