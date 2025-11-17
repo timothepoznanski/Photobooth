@@ -520,8 +520,15 @@ def reprint_photo(filename):
             
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__)))
             
+            # Logger les détails
+            logger.info(f"[REPRINT] Command: {' '.join(cmd)}")
+            logger.info(f"[REPRINT] Return code: {result.returncode}")
+            logger.info(f"[REPRINT] Stdout: {result.stdout}")
+            logger.info(f"[REPRINT] Stderr: {result.stderr}")
+            
             if result.returncode == 0:
                 flash('Photo réimprimée avec succès!', 'success')
+                logger.info("[REPRINT] Success!")
             else:
                 error_msg = result.stderr.strip() if result.stderr else 'Erreur inconnue'
                 if 'ModuleNotFoundError' in error_msg and 'escpos' in error_msg:
