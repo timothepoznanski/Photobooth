@@ -3,10 +3,8 @@
 
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, flash, Response, abort
 import os
-import time
 import subprocess
 import threading
-import requests
 import logging
 import signal
 import atexit
@@ -18,11 +16,9 @@ from config_utils import (
     save_config,
     ensure_directories,
 )
-# USB camera support removed. No need to import camera_utils.
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'photobooth_secret_key_2024')
-# USB camera support removed. No need to import camera_utils.
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -158,34 +154,29 @@ def capture_photo():
         filename = f'photo_{timestamp}.jpg'
         filepath = os.path.join(PHOTOS_FOLDER, filename)
         
-        camera_type = config.get('camera_type', 'picamera')
-        
-        # Mode Pi Camera - utiliser rpicam-still pour une capture haute qualité
-        if camera_type == 'picamera':
-            logger.info("[CAPTURE] Utilisation de rpicam-still pour capture haute qualité")
-            try:
-                cmd = [
-                    'rpicam-still',
-                    '-o', filepath,
-                    '--timeout', '1000',
-                    '--width', '2304',      # Résolution plus élevée pour la photo
-                    '--height', '1296',
-                    '--nopreview'
-                ]
+        # Utiliser rpicam-still pour une capture haute qualité
+        logger.info("[CAPTURE] Utilisation de rpicam-still pour capture haute qualité")
+        try:
+            cmd = [
+                'rpicam-still',
+                '-o', filepath,
+                '--timeout', '1000',
+                '--width', '2304',
+                '--height', '1296',
+                '--nopreview'
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0 and os.path.exists(filepath):
+                current_photo = filename
+                logger.info(f"Photo capturée avec succès: {filename}")
+                return jsonify({'success': True, 'filename': filename})
+            else:
+                raise Exception(f"Échec rpicam-still: {result.stderr}")
                 
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-                
-                if result.returncode == 0 and os.path.exists(filepath):
-                    current_photo = filename
-                    logger.info(f"Photo Pi Camera capturée avec succès: {filename}")
-                    
-                    return jsonify({'success': True, 'filename': filename})
-                else:
-                    raise Exception(f"Échec rpicam-still: {result.stderr}")
-                    
-            except Exception as e:
-                logger.info(f"Erreur rpicam-still, fallback vers frame MJPEG: {e}")
-                # Fallback vers la méthode frame MJPEG
+        except Exception as e:
+            logger.info(f"Erreur rpicam-still, fallback vers frame MJPEG: {e}")
         
         # Fallback - capturer la frame actuelle du flux MJPEG
         with frame_lock:
@@ -388,11 +379,6 @@ def save_admin_config():
         timer_seconds = request.form.get('timer_seconds', '3').strip()
         config['timer_seconds'] = int(timer_seconds) if timer_seconds else 3
         
-        config['high_density'] = 'high_density' in request.form
-        
-        # Configuration de la caméra (Pi Camera uniquement)
-        config['camera_type'] = 'picamera'
-        
         # Configuration de l'imprimante
         config['printer_enabled'] = 'printer_enabled' in request.form
         config['printer_port'] = request.form.get('printer_port', '/dev/ttyS0')
@@ -524,8 +510,6 @@ def reprint_photo(filename):
     
     return redirect(url_for('admin'))
 
-# Diaporama feature removed: /api/slideshow endpoint deleted
-
 @app.route('/api/printer_status')
 def get_printer_status():
     """API pour vérifier l'état de l'imprimante"""
@@ -547,18 +531,13 @@ def video_stream():
                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def generate_video_stream():
-    """Générer le flux vidéo MJPEG selon le type de caméra configuré (Pi Camera only)"""
+    """Générer le flux vidéo MJPEG avec la Pi Camera"""
     global camera_process, last_frame
-    
-    # Déterminer le type de caméra à utiliser
-    camera_type = config.get('camera_type', 'picamera')
     
     try:
         # Arrêter tout processus caméra existant
         stop_camera_process()
         
-        # Utiliser la Pi Camera par défaut
-        # (USB camera support removed, any non-picamera config falls back to picamera)
         logger.info("[CAMERA] Démarrage de la Pi Camera...")
         # Commande rpicam-vid pour flux MJPEG - résolution 16/9
         cmd = [
@@ -633,7 +612,7 @@ def generate_video_stream():
         stop_camera_process()
 
 def stop_camera_process():
-    """Arrêter proprement le processus caméra (Pi Camera)"""
+    """Arrêter proprement le processus caméra"""
     global camera_process
     
     # Arrêter le processus libcamera-vid si actif
@@ -662,87 +641,6 @@ def stop_camera():
     camera_active = False
     stop_camera_process()
     return jsonify({'status': 'camera_stopped'})
-
-@app.route('/admin/kiosk_control', methods=['POST'])
-def kiosk_control():
-    """Contrôler le mode kiosk (arrêter/redémarrer)"""
-    try:
-        action = request.json.get('action')
-        
-        if action == 'stop':
-            # Arrêter le service kiosk
-            subprocess.run(['sudo', 'systemctl', 'stop', 'simplebooth-kiosk.service'], check=True)
-            subprocess.run(['sudo', 'systemctl', 'disable', 'simplebooth-kiosk.service'], check=True)
-            # Arrêter Chromium
-            subprocess.run(['sudo', 'pkill', '-f', 'chromium'], check=False)
-            return jsonify({
-                'status': 'success',
-                'message': 'Mode kiosk arrêté. Vous pouvez maintenant utiliser l\'interface normale.'
-            })
-            
-        elif action == 'restart':
-            # Redémarrer le service kiosk
-            subprocess.run(['sudo', 'systemctl', 'enable', 'simplebooth-kiosk.service'], check=True)
-            subprocess.run(['sudo', 'systemctl', 'restart', 'simplebooth-kiosk.service'], check=True)
-            return jsonify({
-                'status': 'success',
-                'message': 'Mode kiosk redémarré. L\'application va se relancer en plein écran.'
-            })
-            
-        elif action == 'status':
-            # Vérifier l'état du service kiosk
-            result = subprocess.run(['sudo', 'systemctl', 'is-active', 'simplebooth-kiosk.service'], 
-                                  capture_output=True, text=True, check=False)
-            is_active = result.stdout.strip() == 'active'
-            
-            result_enabled = subprocess.run(['sudo', 'systemctl', 'is-enabled', 'simplebooth-kiosk.service'], 
-                                          capture_output=True, text=True, check=False)
-            is_enabled = result_enabled.stdout.strip() == 'enabled'
-            
-            return jsonify({
-                'status': 'success',
-                'kiosk_active': is_active,
-                'kiosk_enabled': is_enabled,
-                'message': f'Service kiosk: {"Actif" if is_active else "Inactif"} / {"Activé" if is_enabled else "Désactivé"}'
-            })
-            
-        else:
-            return jsonify({
-                'status': 'error',
-                'message': 'Action non reconnue'
-            }), 400
-            
-    except subprocess.CalledProcessError as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Erreur lors de l\'exécution de la commande: {str(e)}'
-        }), 500
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Erreur: {str(e)}'
-        }), 500
-
-@app.route('/admin/shutdown', methods=['POST'])
-def shutdown_application():
-    """Arrêter complètement l'application (Chromium + app Python)"""
-    try:
-        # Arrêter Chromium
-        subprocess.run(['sudo', 'pkill', '-f', 'chromium'], check=False)
-        
-        # Arrêter l'application Python
-        subprocess.run(['sudo', 'pkill', '-f', 'python.*app.py'], check=False)
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'Application arrêtée complètement. Redémarrez avec sudo reboot.'
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Erreur: {str(e)}'
-        }), 500
 
 # Nettoyer les processus à la fermeture
 @atexit.register

@@ -9,10 +9,8 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 DEFAULT_CONFIG = {
     'footer_text': 'Photobooth',
     'timer_seconds': 3,
-    'high_density': False,
-    'camera_type': 'picamera',
     'printer_enabled': True,
-    'printer_port': '/dev/ttyAMA0',
+    'printer_port': '/dev/ttyS0',
     'printer_baudrate': 9600,
     'print_resolution': 384
 }

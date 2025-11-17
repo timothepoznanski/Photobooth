@@ -183,11 +183,6 @@
     {% block styles %}{% endblock %}
 </head>
 <body>
-    <!-- Bouton secret pour quitter l'application et revenir au desktop -->
-    <button id="secret-exit-btn" aria-hidden="true" title="Quitter l'application" 
-            style="position:fixed; top:10px; right:10px; width:48px; height:48px; background:transparent; border:none; padding:0; margin:0; opacity:0.02; z-index:2000; cursor:pointer;">
-    </button>
-
     <div class="container-fluid">
         <!-- Toast Container -->
         <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055;">
@@ -277,27 +272,6 @@
     </style>
     
     <script>
-    // Bouton discret pour quitter l'application et revenir au desktop
-    document.addEventListener('DOMContentLoaded', function() {
-        var btn = document.getElementById('secret-exit-btn');
-        if (!btn) return;
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (!confirm('Arrêter complètement SimpleBooth ?\n\nPour redémarrer, utilisez sudo reboot.')) return;
-
-            // Appeler l'API pour arrêter complètement l'application
-            fetch('/admin/shutdown', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(function(response) {
-                // L'application va s'arrêter, pas besoin de faire autre chose
-            })
-            .catch(function() {
-                // En cas d'erreur, ne rien faire de spécial
-            });
-        });
-    });
     </script>
 
     {% block scripts %}{% endblock %}
