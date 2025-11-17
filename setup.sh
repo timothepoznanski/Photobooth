@@ -41,92 +41,6 @@ warn()    { echo "  ⚠ $*"; }
 error()   { echo "  ✗ $*" >&2; exit 1; }
 progress() { echo "  ⟳ $*"; }
 
-# Affichage temps réel avec spinner et logs
-SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-SPINNER_PID=""
-LOG_MONITOR_PID=""
-TEMP_LOG=""
-
-# Monitorer les logs en temps réel
-start_log_monitor() {
-  local temp_log="$1"
-  local base_message="$2"
-  local i=0
-  
-  while true; do
-    # Lire la dernière ligne du log temporaire
-    local last_line=""
-    if [[ -f "$temp_log" ]]; then
-      last_line=$(tail -n1 "$temp_log" 2>/dev/null | sed 's/^[[:space:]]*//' | cut -c1-50)
-    fi
-    
-    # Afficher le spinner avec la dernière ligne (version simple)
-    if [[ -n "$last_line" && "$last_line" != "" ]]; then
-      printf "\r  ${SPINNER_CHARS:$i:1} %s\n  └─ %s...\033[1A" "$base_message" "$last_line"
-    else
-      printf "\r  ${SPINNER_CHARS:$i:1} %s" "$base_message"
-    fi
-    
-    i=$(( (i + 1) % ${#SPINNER_CHARS} ))
-    sleep 0.2
-  done &
-  LOG_MONITOR_PID=$!
-}
-
-stop_log_monitor() {
-  [[ -n "$LOG_MONITOR_PID" ]] && kill "$LOG_MONITOR_PID" 2>/dev/null
-  LOG_MONITOR_PID=""
-  printf "\r\033[K\033[1B\033[K\033[1A"  # Efface les 2 lignes
-}
-
-# Exécuter une commande avec affichage temps réel des logs
-run_with_live_output() {
-  local message="$1"
-  shift
-  
-  # Créer un fichier temporaire pour cette commande
-  TEMP_LOG="$(mktemp)"
-  
-  # Démarrer le monitoring
-  start_log_monitor "$TEMP_LOG" "$message"
-  
-  # Exécuter la commande avec sortie vers le log temporaire et principal
-  "$@" > >(tee -a "$TEMP_LOG" >> "$LOG_FILE") 2>&1
-  local result=$?
-  
-  # Arrêter le monitoring
-  stop_log_monitor
-  
-  # Nettoyer
-  [[ -f "$TEMP_LOG" ]] && rm -f "$TEMP_LOG"
-  
-  return $result
-}
-
-# Version simple pour les commandes rapides
-run_with_spinner() {
-  local message="$1"
-  shift
-  local i=0
-  
-  # Pour les commandes courtes, juste un spinner simple
-  while true; do
-    printf "\r  ${SPINNER_CHARS:$i:1} %s" "$message"
-    i=$(( (i + 1) % ${#SPINNER_CHARS} ))
-    sleep 0.1
-  done &
-  SPINNER_PID=$!
-  
-  "$@" >> "$LOG_FILE" 2>&1
-  local result=$?
-  
-  [[ -n "$SPINNER_PID" ]] && kill "$SPINNER_PID" 2>/dev/null
-  SPINNER_PID=""
-  printf "\r\033[K"
-  
-  return $result
-}
-
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------
 # SimpleBooth Kiosk Installer Script (allégé)
@@ -141,7 +55,6 @@ IFS=$'\n\t'
 # Déduit le répertoire de l'application d'après l'emplacement du script
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIR="$APP_DIR/venv"
-LOG_FILE="$APP_DIR/setup.log"
 INSTALL_USER="${SUDO_USER:-${USER}}"
 HOME_DIR="$(eval echo ~${INSTALL_USER})"
 
@@ -237,10 +150,7 @@ else
 fi
 
 # -------------------- Trap erreurs --------------------
-trap 'error "Échec à la ligne $LINENO. Voir $LOG_FILE"' ERR
-# Créer le fichier de log avec les bonnes permissions
-touch "$LOG_FILE" 2>/dev/null || LOG_FILE="./setup.log"
-exec &> >(tee "$LOG_FILE")
+trap 'error "Échec à la ligne $LINENO"' ERR
 
 # -------------------- Fonctions --------------------
 require_root() { 
@@ -257,21 +167,13 @@ confirm() {
   [[ "${resp:-$default}" =~ ^[Oo]$ ]]
 }
 
-# Afficher un résumé des logs si nécessaire
-show_log_summary() {
-  [[ -f "$LOG_FILE" ]] || return
-  local errors=$(grep -i "error\|failed\|échec" "$LOG_FILE" 2>/dev/null | wc -l)
-  if (( errors > 0 )); then
-    warn "$errors erreur(s) détectée(s) dans les logs"
-    echo "Voir les détails: cat $LOG_FILE"
-  fi
-}
-
 update_system() {
   step "Mise à jour du système"
   
-  run_with_live_output "Téléchargement de la liste des paquets..." apt-get update || error "Échec téléchargement liste paquets"
-  run_with_live_output "Installation des mises à jour système..." apt-get upgrade -y || error "Échec mise à jour système"
+  progress "Téléchargement de la liste des paquets..."
+  apt-get update || error "Échec téléchargement liste paquets"
+  progress "Installation des mises à jour système..."
+  apt-get upgrade -y || error "Échec mise à jour système"
   
   ok "Système mis à jour avec succès"
 }
@@ -282,9 +184,8 @@ install_dependencies() {
   step "Installation des dépendances"
   log "${#pkgs[@]} paquets à installer"
   
-  # Installation avec affichage temps réel
-  echo "[$(date)] Installation: ${pkgs[*]}" >> "$LOG_FILE"
-  run_with_live_output "Installation de ${#pkgs[@]} paquets système..." apt-get install -y "${pkgs[@]}" || error "Échec installation des dépendances"
+  progress "Installation de ${#pkgs[@]} paquets système..."
+  apt-get install -y "${pkgs[@]}" || error "Échec installation des dépendances"
   
   # Vérification critique
   progress "Vérification des paquets critiques..."
@@ -347,18 +248,20 @@ setup_python_env() {
   step "Configuration environnement Python"
   command -v python3 >/dev/null || error "Python 3 non installé"
   
-  echo "[$(date)] Création venv: $VENV_DIR" >> "$LOG_FILE"
-  run_with_spinner "Création de l'environnement virtuel..." python3 -m venv "$VENV_DIR" || error "Échec création environnement virtuel"
+  progress "Création de l'environnement virtuel..."
+  python3 -m venv "$VENV_DIR" || error "Échec création environnement virtuel"
   
   source "$VENV_DIR/bin/activate" || error "Échec activation venv"
   
-  echo "[$(date)] Installation paquets Python" >> "$LOG_FILE"
-  run_with_live_output "Mise à jour de pip..." pip install --upgrade pip || error "Échec mise à jour pip"
+  progress "Mise à jour de pip..."
+  pip install --upgrade pip || error "Échec mise à jour pip"
   
   if [[ -f "$APP_DIR/requirements.txt" ]]; then
-    run_with_live_output "Installation depuis requirements.txt..." pip install -r "$APP_DIR/requirements.txt" || error "Échec installation requirements.txt"
+    progress "Installation depuis requirements.txt..."
+    pip install -r "$APP_DIR/requirements.txt" || error "Échec installation requirements.txt"
   else
-    run_with_live_output "Installation des paquets Python (flask, pillow, numpy)..." pip install flask pillow numpy || error "Échec installation paquets Python"
+    progress "Installation des paquets Python (flask, pillow, numpy)..."
+    pip install flask pillow numpy || error "Échec installation paquets Python"
   fi
   
   deactivate
@@ -424,9 +327,10 @@ setup_systemd() {
   sed -i "s|Environment=HOME=.*|Environment=HOME=$HOME_DIR|" /etc/systemd/system/simplebooth-kiosk.service
   sed -i "s|ExecStart=.*|ExecStart=$HOME_DIR/start_simplebooth.sh|" /etc/systemd/system/simplebooth-kiosk.service
   
-  echo "[$(date)] Configuration systemd" >> "$LOG_FILE"
-  run_with_spinner "Rechargement des services systemd..." systemctl daemon-reload || error "Échec rechargement systemd"
-  run_with_spinner "Activation du service SimpleBooth..." systemctl enable simplebooth-kiosk.service || error "Échec activation service"
+  progress "Rechargement des services systemd..."
+  systemctl daemon-reload || error "Échec rechargement systemd"
+  progress "Activation du service SimpleBooth..."
+  systemctl enable simplebooth-kiosk.service || error "Échec activation service"
   ok "Services système configurés avec succès"
   mkdir -p /etc/systemd/system/getty@tty1.service.d
   cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
@@ -445,7 +349,6 @@ main() {
   header " SIMPLEBOOTH INSTALLER "
   echo "Auteur: Les Frères Poulain"
   echo "Version: Raspberry Pi OS"
-  echo "Logs: $LOG_FILE"
   echo
   
   update_system
@@ -469,7 +372,6 @@ main() {
   setup_systemd
   
   echo
-  show_log_summary
   header "✨ INSTALLATION TERMINÉE ✨"
   warn "Redémarrage recommandé pour activer tous les services"
   confirm "Redémarrer maintenant? (o/N)" && reboot
