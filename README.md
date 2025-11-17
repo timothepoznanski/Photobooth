@@ -51,57 +51,31 @@ Voici une liste de matériel compatible. Les liens sont affiliés et aident à s
 
 ### Installation
 
-### 🚀 Installation
+### 🚀 Installation rapide (après git clone)
 
-L'installation peut se faire de deux manières : automatiquement via un script (recommandé sur Raspberry Pi) ou manuellement.
+Après un `git clone`, vous pouvez installer SimpleBooth automatiquement :
 
-#### Méthode 1 : Installation automatique avec `setup.sh` (Recommandé)
+### Installation complète automatique
+```bash
+cd SimpleBooth
+sudo ./setup.sh --quick
+sudo reboot
+```
 
-Un script `setup.sh` est fourni pour automatiser l'ensemble du processus sur un système basé sur Debian (comme Raspberry Pi OS).
+### Ou installation manuelle étape par étape
+```bash
+cd SimpleBooth
+sudo ./setup.sh  # Installation interactive complète
+```
 
-1.  **Rendre le script exécutable :**
-    ```bash
-    chmod +x setup.sh
-    ```
+### Vérification
+Après redémarrage, SimpleBooth devrait démarrer automatiquement en mode kiosk.
 
-2.  **Lancer le script d'installation :**
-    ```bash
-    ./setup.sh
-    ```
-    Ce script s'occupe de :
-    - Mettre à jour les paquets système.
-    - Installer les dépendances système (`libcamera-apps`, `python3-opencv`).
-    - Créer un environnement virtuel `venv`.
-    - Installer les dépendances Python de `requirements.txt` dans cet environnement.
-    - Creer un mode kiosk automatique au demarrage du systeme.
-
-#### Méthode 2 : Installation manuelle
-
-Suivez ces étapes pour une installation manuelle.
-
-1.  **Créer et activer un environnement virtuel :**
-    Il est fortement recommandé d'utiliser un environnement virtuel pour isoler les dépendances du projet.
-    ```bash
-    # Créer l'environnement
-    python3 -m venv venv
-
-    # Activer l'environnement
-    source venv/bin/activate
-    ```
-    > Pour quitter l'environnement virtuel, tapez simplement `deactivate`.
-
-2.  **Sur Raspberry Pi, installer les dépendances système :**
-    Si vous ne l'avez pas déjà fait, installez les paquets nécessaires pour les caméras.
-    ```bash
-    sudo apt update
-    sudo apt upgrade
-    sudo apt install libcamera-apps python3-opencv
-    ```
-
-3.  **Installer les dépendances Python :**
-    ```bash
-    pip install -r requirements.txt
-    ```
+### Dépannage
+Si ça ne marche pas :
+- Vérifiez les logs : `sudo journalctl -u simplebooth-kiosk.service`
+- Lancez manuellement : `python3 app.py`
+- Accédez via : `http://<IP_RASPBERRY>:5000`
 
 ## Utilisation
 

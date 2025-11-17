@@ -127,6 +127,16 @@ run_with_spinner() {
   return $result
 }
 
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------
+# SimpleBooth Kiosk Installer Script (allégé)
+# Auteur : Les Frères Poulain (modifié par Assistant)
+# Description : Configuration automatisée pour Raspberry Pi OS
+# ---------------------------------------------------------------------
+
+set -euo pipefail
+IFS=$'\n\t'
+
 # -------------------- Variables --------------------
 # Déduit le répertoire de l'application d'après l'emplacement du script
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -134,6 +144,80 @@ VENV_DIR="$APP_DIR/venv"
 LOG_FILE="$APP_DIR/setup.log"
 INSTALL_USER="${SUDO_USER:-${USER}}"
 HOME_DIR="$(eval echo ~${INSTALL_USER})"
+
+# -------------------- Fonctions --------------------
+require_root() { 
+  (( EUID == 0 )) || error "Exécutez en root (sudo)"
+  [[ "$(uname -m)" =~ ^(arm|aarch64) ]] || error "Ce script est conçu pour Raspberry Pi (ARM)"
+  [[ -n "$SUDO_USER" ]] || error "Utilisez sudo, pas su ou root direct"
+}
+
+# -------------------- Main rapide --------------------
+main_quick() {
+  require_root
+  
+  echo "🚀 Installation rapide SimpleBooth"
+  echo "=================================="
+  
+  # Mise à jour système
+  echo "📦 Mise à jour système..."
+  apt-get update && apt-get upgrade -y
+  
+  # Installation dépendances
+  echo "🔧 Installation dépendances..."
+  apt-get install -y python3 python3-venv python3-pip build-essential libcap2-bin libcap-dev xserver-xorg xinit x11-xserver-utils unclutter chromium-browser
+  
+  # Configuration Python
+  echo "🐍 Configuration Python..."
+  python3 -m venv "$VENV_DIR"
+  source "$VENV_DIR/bin/activate"
+  pip install --upgrade pip
+  pip install -r "$APP_DIR/requirements.txt"
+  deactivate
+  
+  # Configuration kiosk
+  echo "🖥️ Configuration kiosk..."
+  mkdir -p "$HOME_DIR/.config/autostart"
+  cp "$APP_DIR/start_simplebooth.sh" "$HOME_DIR/"
+  chmod +x "$HOME_DIR/start_simplebooth.sh"
+  
+  cat > "$HOME_DIR/.config/autostart/simplebooth.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=SimpleBooth Kiosk
+Exec=$HOME_DIR/start_simplebooth.sh
+X-GNOME-Autostart-enabled=true
+Comment=SimpleBooth Kiosk mode
+EOF
+  
+  # Configuration systemd
+  echo "⚙️ Configuration systemd..."
+  cp "$APP_DIR/systemd/simplebooth-kiosk.service" /etc/systemd/system/
+  sed -i "s/User=.*/User=$INSTALL_USER/" /etc/systemd/system/simplebooth-kiosk.service
+  sed -i "s/Group=.*/Group=$INSTALL_USER/" /etc/systemd/system/simplebooth-kiosk.service
+  sed -i "s|Environment=HOME=.*|Environment=HOME=$HOME_DIR|" /etc/systemd/system/simplebooth-kiosk.service
+  sed -i "s|ExecStart=.*|ExecStart=$HOME_DIR/start_simplebooth.sh|" /etc/systemd/system/simplebooth-kiosk.service
+  
+  systemctl daemon-reload
+  systemctl enable simplebooth-kiosk.service
+  
+  # Autologin
+  mkdir -p /etc/systemd/system/getty@tty1.service.d
+  cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $INSTALL_USER --noclear %I \$TERM
+EOF
+  
+  echo "✅ Installation terminée !"
+  echo "🔄 Redémarrage recommandé"
+}
+
+# Mode rapide si argument --quick
+if [[ "${1:-}" == "--quick" ]]; then
+  main_quick
+  exit 0
+fi
 WAVE_ENABLED=true
 
 # Vérification système critique
@@ -329,27 +413,17 @@ setup_systemd() {
   step "Configuration des services système"
   # S'assurer que le script de démarrage existe
   [[ -f "$HOME_DIR/start_simplebooth.sh" ]] || error "Script de démarrage manquant"
-  progress "Création du service systemd..."
+  progress "Installation du service systemd..."
   
-  cat > /etc/systemd/system/simplebooth-kiosk.service <<EOF
-[Unit]
-Description=SimpleBooth Kiosk
-After=graphical.target
-Wants=graphical.target
-
-[Service]
-Type=simple
-User=$INSTALL_USER
-Group=$INSTALL_USER
-Environment=DISPLAY=:0
-Environment=HOME=$HOME_DIR
-ExecStart=$HOME_DIR/start_simplebooth.sh
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=graphical.target
-EOF
+  # Copier le fichier service depuis le dépôt
+  cp "$APP_DIR/systemd/simplebooth-kiosk.service" /etc/systemd/system/ || error "Échec copie service systemd"
+  
+  # Adapter le service pour l'utilisateur actuel
+  sed -i "s/User=.*/User=$INSTALL_USER/" /etc/systemd/system/simplebooth-kiosk.service
+  sed -i "s/Group=.*/Group=$INSTALL_USER/" /etc/systemd/system/simplebooth-kiosk.service
+  sed -i "s|Environment=HOME=.*|Environment=HOME=$HOME_DIR|" /etc/systemd/system/simplebooth-kiosk.service
+  sed -i "s|ExecStart=.*|ExecStart=$HOME_DIR/start_simplebooth.sh|" /etc/systemd/system/simplebooth-kiosk.service
+  
   echo "[$(date)] Configuration systemd" >> "$LOG_FILE"
   run_with_spinner "Rechargement des services systemd..." systemctl daemon-reload || error "Échec rechargement systemd"
   run_with_spinner "Activation du service SimpleBooth..." systemctl enable simplebooth-kiosk.service || error "Échec activation service"

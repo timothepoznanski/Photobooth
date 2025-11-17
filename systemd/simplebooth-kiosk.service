@@ -1,0 +1,17 @@
+[Unit]
+Description=SimpleBooth Kiosk
+After=graphical.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+Environment=DISPLAY=:0
+Environment=HOME=/home/admin
+ExecStart=/home/admin/start_simplebooth.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
