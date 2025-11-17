@@ -520,6 +520,12 @@ def reprint_photo(filename):
             
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__)))
             
+            # Logger les détails pour déboguer
+            logger.info(f"[PRINT] Command: {' '.join(cmd)}")
+            logger.info(f"[PRINT] Return code: {result.returncode}")
+            logger.info(f"[PRINT] Stdout: {result.stdout}")
+            logger.info(f"[PRINT] Stderr: {result.stderr}")
+            
             if result.returncode == 0:
                 flash('Photo réimprimée avec succès!', 'success')
             else:
