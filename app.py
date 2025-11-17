@@ -50,32 +50,19 @@ def check_printer_status():
                 'paper_status': 'unknown'
             }
         
-        # Tenter de se connecter à l'imprimante
-        try:
-            printer = Serial(printer_port, baudrate=printer_baudrate, timeout=1)
-            
-            # Vérifier l'état du papier (commande ESC/POS standard)
-            # Utiliser la méthode paper_status() au lieu de raw command pour éviter les problèmes
-            try:
-                paper_status = printer.paper_status()
-                paper_status_msg = 'ok' if paper_status == 2 else 'error'
-            except:
-                paper_status_msg = 'unknown'
-            
-            printer.close()
-            
+        # Vérifier simplement si le port existe (sans se connecter)
+        if os.path.exists(printer_port):
             return {
                 'status': 'ok',
-                'message': 'Imprimante connectée',
-                'paper_status': paper_status_msg,
+                'message': 'Imprimante configurée',
+                'paper_status': 'unknown',
                 'port': printer_port,
                 'baudrate': printer_baudrate
             }
-            
-        except Exception as e:
+        else:
             return {
                 'status': 'error',
-                'message': f'Erreur de connexion: {str(e)}',
+                'message': f'Port {printer_port} introuvable',
                 'paper_status': 'unknown',
                 'port': printer_port,
                 'baudrate': printer_baudrate

@@ -218,6 +218,7 @@
                                     <th>Type</th>
                                     <th>Date</th>
                                     <th>Taille</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -252,6 +253,11 @@
                                     </td>
                                     <td>{{ photo.date }}</td>
                                     <td>{{ "%.1f"|format(photo.size_kb) }} KB</td>
+                                    <td>
+                                        <button class="btn btn-danger" onclick="deletePhoto('{{ photo.filename }}')" title="Supprimer" style="padding: 1px 5px; font-size: 0.7rem; line-height: 1;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -519,6 +525,25 @@ function confirmDeleteAllPhotos() {
 function cancelDeleteAllPhotos() {
     document.getElementById('deleteConfirmModal').classList.remove('show');
     document.getElementById('deleteConfirmModal').style.display = 'none';
+}
+
+function deletePhoto(filename) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer "${filename}" ?`)) {
+        fetch(`/admin/delete_photo/${filename}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la suppression: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Erreur réseau: ' + error);
+        });
+    }
 }
 
 // Initialisation au chargement de la page
