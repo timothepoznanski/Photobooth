@@ -60,3 +60,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Symbolic links (created by setup)
+start_simplebooth.sh
