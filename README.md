@@ -10,175 +10,33 @@
 
 ## 🎯 Aperçu
 
-Cette application transforme votre Raspberry Pi en un photobooth professionnel avec :
-- **Flux vidéo temps réel** en MJPEG 1280x720 (16:9)
-- **Support caméra** : Pi Camera (caméras officielles Raspberry Pi)
-- **Interface tactile optimisée** pour écran 7 pouces
-- **Capture photo instantanée** directement depuis le flux vidéo
-- **Galerie de photos intégrée** avec gestion complète
- - (Diaporama feature removed from this build)
-- **Impression thermique** avec configuration avancée et détection des ports
-- **Interface d'administration** complète avec contrôles système
-- **Mode kiosk automatique** pour démarrage au boot
-- **API de statut** pour surveillance de l'imprimante
-
-## 🔧️ Matériel requis
-
 ### Matériel supporté
 
-- **Caméra** : 
-  - Raspberry Pi Camera (v1, v2, v3, HQ) - Détection automatique
-  <!-- USB camera support removed in this build. -->
-- **Écran tactile** : Écran 7 pouces recommandé
-- **Imprimante thermique Série** : Compatible avec détection automatique des ports série
-
-### 🛒 Liens d'achat (Affiliation)
-
-Voici une liste de matériel compatible. Les liens sont affiliés et aident à soutenir le projet.
-
-- **Raspberry Pi & Accessoires :**
-  - [Raspberry Pi 5](https://amzlink.to/az0ncNNUsGjUH)
-  - [Alimentation Raspberry Pi 5](https://amzlink.to/az01ijEmlFqxT)
-- **Caméras :**
-  - [Pi Camera 3](https://amzlink.to/az0eEXwhnxNvO)
-  - [Pi Camera 2.1](https://amzlink.to/az0mgp7Sob1xh)
-- **Imprimantes Thermiques :**
-  - [Imprimante Thermique (Amazon)](https://amzlink.to/az0wTKS9Bfig2)
-  - [Imprimante Thermique (AliExpress)](https://s.click.aliexpress.com/e/_oFyCgCI)
-  - [Imprimante Thermique (France)](https://www.gotronic.fr/art-imprimante-thermique-ada597-21349.htm)
-- **Écran :**
-  - [Ecran Waveshare (Amazon)](https://amzlink.to/az03G4UMruNnc)
+- Raspberry pi 4
+- [Alimentation Raspberry Pi 5](https://amzlink.to/az01ijEmlFqxT)
+- [Pi Camera 3](https://amzlink.to/az0eEXwhnxNvO)
+- [Imprimante Thermique (AliExpress)](https://s.click.aliexpress.com/e/_oFyCgCI)
+- [Ecran Waveshare (Amazon)](https://amzlink.to/az03G4UMruNnc)
 
 ### Installation
 
-### 🚀 Installation rapide (après git clone)
-
 Après un `git clone`, vous pouvez installer SimpleBooth automatiquement :
 
-### Installation complète automatique
-```bash
-cd SimpleBooth
-sudo ./setup.sh --quick
-sudo reboot
-```
-
-### Ou installation manuelle étape par étape
 ```bash
 cd SimpleBooth
 sudo ./setup.sh  # Installation interactive complète
 ```
 
-### Vérification
-Après redémarrage, SimpleBooth devrait démarrer automatiquement en mode kiosk.
+**Accéder à l'interface :**
 
-### Dépannage
-Si ça ne marche pas :
-- Vérifiez les logs : `sudo journalctl -u simplebooth-kiosk.service`
-- Lancez manuellement : `python3 app.py`
-- Accédez via : `http://<IP_RASPBERRY>:5000`
-
-## Utilisation
-
-1. **Lancer l'application :**
-```bash
-python3 app.py
-```
-
-2. **Accéder à l'interface :**
    - Ouvrir un navigateur sur `http://localhost:5000`
    - Ou depuis un autre appareil : `http://[IP_RASPBERRY]:5000`
 
-3. **Pages disponibles :**
+**Pages disponibles :**
    - `/` : Interface principale du photobooth
    - `/photos` : Galerie de gestion des photos
    - `/admin` : Panneau d'administration complet
 
-## Configuration des caméras
-
-L'application supporte deux types de caméras avec détection automatique :
-
-### Pi Camera (par défaut)
-
-- Utilise `rpicam-vid` pour le flux vidéo temps réel (1280x720@15fps)
-- Utilise `rpicam-still` pour les captures haute qualité (2304x1296)
-- Détection automatique de la caméra Pi
-- Compatible avec toutes les caméras officielles Raspberry Pi
-
-<!-- USB camera support removed in this build. Only Raspberry Pi camera supported. -->
-
-> **Note** : 
-> - La détection automatique facilite la configuration
-> - Les permissions sont gérées automatiquement par le script `setup.sh`
-<!-- USB hot-plug support removed in this build -->
-
-## 📂 Structure des fichiers
-
-Le projet est organisé de manière modulaire pour une meilleure maintenance :
-
-```
-SimpleBooth/
-├── app.py                 # Application Flask principale (routes, logique)
-├── camera_utils.py        # Utilitaires pour la gestion des caméras (Pi Camera only)
-├── config_utils.py        # Utilitaires pour charger/sauvegarder la configuration
-├── ScriptPythonPOS.py     # Script autonome pour l'impression thermique
-├── setup.sh               # Script d'installation automatisée pour Raspberry Pi
-├── requirements.txt       # Dépendances Python
-├── TROUBLESHOOTING.md     # Guide de dépannage
-├── static/                # Fichiers statiques
-│   └── manifest.json      # Manifest PWA
-├── templates/             # Templates HTML (Jinja2)
-│   ├── index.html         # Interface principale du photobooth
-│   ├── review.html        # Page de prévisualisation et d'action post-capture
-│   ├── photos.html        # Galerie de gestion des photos
-│   ├── admin.html         # Panneau d'administration avancé
-│   └── base.html          # Template de base commun
-├── photos/                # Dossier pour les photos (créé au lancement)
-└── config.json            # Fichier de configuration (créé au lancement)
-```
-
 ## Configuration
 
-La configuration est sauvegardée dans `config.json` :
-
-### Général
-- `footer_text` : Texte en pied de photo
-- `timer_seconds` : Délai avant capture (1-10 secondes)
-
-### Caméra
-- `camera_type` : Type de caméra (`picamera`)
-<!-- usb_camera_id removed -->
-
-### Impression
-- `printer_enabled` : Activer/désactiver l'impression
-- `printer_port` : Port série de l'imprimante (détection automatique disponible)
-- `printer_baudrate` : Vitesse de communication (9600, 19200, 38400...)
-- `print_resolution` : Résolution d'impression (384 standard, 576+ haute qualité)
-
-<!-- Diaporama section removed -->
-
-## 🆕 Nouvelles fonctionnalités
-
-### Galerie de photos intégrée
-- Page dédiée `/photos` pour la gestion des photos
-- Prévisualisation, téléchargement et suppression
-- Réimpression directe depuis la galerie
-- Métadonnées complètes (taille, date)
-
-### Administration avancée
-<!-- USB camera detection removed -->
-- Détection automatique des ports série
-- Contrôle du mode kiosk (arrêt/redémarrage)
-- Arrêt complet de l'application
-- Surveillance en temps réel de l'imprimante
-
-### API et surveillance
-<!-- /api/slideshow removed -->
-- `/api/printer_status` : État de l'imprimante
-- Logs détaillés et gestion d'erreurs améliorée
-
-## Dépannage
-
-- **Caméra non détectée** : Vérifier que la caméra est activée dans `raspi-config`
-- **Erreur d'impression** : Utiliser la détection automatique des ports ou vérifier `/dev/ttyAMA0`
-- **Mode kiosk bloqué** : Accéder à `/admin` puis utiliser les contrôles système
-- **Caméra non reconnue** : Vérifier que la caméra Pi est correctement connectée et activée dans `raspi-config`.
+La configuration est sauvegardée dans `config.json`
