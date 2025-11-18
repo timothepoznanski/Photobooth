@@ -1,16 +1,5 @@
 # 📸 Photobooth Raspberry Pi
 
-### Introduction et crédits
-
-Comme vous pouvez le voir, j'ai forké le projet des Frères Poulin. Bravo à eux pour ce superbe projet qui m'a inspiré.
-
-Leur vidéo -> https://www.youtube.com/watch?v=GxFLX6c7Nos
-
-J'avais un Raspberry Pi 4 qui trainait donc j'ai voulu en faire quelque chose. 
-Le code des FP ne fonctionnait pas sur mon Raspberry Pi 4 avec la dernière version de l'OS donc j'ai tout mis à jour dans mon code que vous trouverez ici. 
-J'ai aussi ajouté une page pour que les personnes puissent télécharger les photos sur leur téléphone plutôt que de passer par Telegram (fonctionnalité que j'ai retiré). J'ai préféré retirer les effets d'IA et simplifié la page d'admin. J'ai également retiré le code pour la caméra USB et ajouté deux boutons sur l'interface pour pouvoir redémarrer l'application depuis l'écran tactile si elle se plantait et un autre bouton pour fermer l'application (par exemple pour aller régler le wifi, connecter le bluetooth) car elle est en pleine écran. 
-J'ai préféré mettre la malette à l'horizontal pour faire plus appareil photo.
-
 > **Application Flask pour photobooth tactile avec flux vidéo temps réel et capture instantanée**
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
@@ -18,6 +7,22 @@ J'ai préféré mettre la malette à l'horizontal pour faire plus appareil photo
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Compatible-red.svg)
 ![OpenCV](https://img.shields.io/badge/OpenCV-Support%20USB-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+### Introduction et crédits
+
+Comme vous pouvez le voir, j'ai forké le projet des Frères Poulin. Bravo à eux pour ce superbe projet qui m'a inspiré.
+
+Leur vidéo -> https://www.youtube.com/watch?v=GxFLX6c7Nos
+
+J'avais un Raspberry Pi 4 qui trainait donc j'ai voulu en faire quelque chose. Quelques changements :
+
+- Le code des FP ne fonctionnait pas sur mon Raspberry Pi 4 avec la dernière version de l'OS donc j'ai tout mis à jour dans mon code que vous trouverez ici.
+- Ajout d'une page pour que les personnes puissent télécharger les photos sur leur téléphone plutôt que de passer par Telegram (fonctionnalité que j'ai retiré).
+- Retrait des effets d'IA.
+- Simplification de la page d'admin + ajout d'un bouton pour supprimer les photos.
+- Retrait du code pour la caméra USB (je n'utilise que la caméra RPI)
+- Ajout de deux boutons sur l'interface pour pouvoir redémarrer l'application depuis l'écran tactile si elle se plantait et un autre bouton pour fermer l'application (par exemple pour aller régler le wifi, connecter le bluetooth) car elle est en pleine écran. 
+- J'ai préféré mettre la malette à l'horizontal pour faire plus appareil photo.
 
 ### Photos du produit terminé
 
