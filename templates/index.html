@@ -12,6 +12,14 @@
         <i class="fas fa-sync-alt"></i>
     </button>
     
+    <!-- Bouton quitter discret en haut à droite -->
+    <button onclick="exitKiosk()" 
+            class="btn btn-sm btn-danger position-fixed" 
+            style="top: 10px; right: 10px; z-index: 30; border-radius: 5px; padding: 5px 10px; background-color: #dc3545; border-color: #dc3545;"
+            title="Quitter le kiosque">
+        <i class="fas fa-times"></i>
+    </button>
+    
     <style>
     /* Ajustements spécifiques pour les petits écrans 800x480 */
     @media (max-width: 800px) and (max-height: 480px) {
@@ -197,6 +205,24 @@ function restartKiosk() {
     .then(data => {
         if (data.success) {
             // Le kiosque va redémarrer, pas besoin d'alerte
+        } else {
+            alert('Erreur: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+    });
+}
+
+// Fonction pour quitter le kiosque
+function exitKiosk() {
+    fetch('/exit_kiosk', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Le kiosque va se fermer, pas besoin d'alerte
         } else {
             alert('Erreur: ' + data.error);
         }

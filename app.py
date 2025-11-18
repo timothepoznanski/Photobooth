@@ -651,6 +651,16 @@ def restart_kiosk():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/exit_kiosk', methods=['POST'])
+def exit_kiosk():
+    """Quitter le service kiosk"""
+    try:
+        # Exécuter la commande pour arrêter le service kiosk
+        subprocess.Popen(['sudo', 'systemctl', 'stop', 'simplebooth-kiosk.service'])
+        return jsonify({'success': True, 'message': 'Arrêt du kiosque...'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 # Nettoyer les processus à la fermeture
 @atexit.register
 def cleanup():
