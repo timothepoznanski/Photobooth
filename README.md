@@ -46,6 +46,8 @@ Note : C'est probablement compatible avec un Raspberry Pi 5 ou d'autres écrans 
 
 ### Schéma de câblage
 
+Les Frères Poulain n'indiquent nul part le cablâge à faire pour les différents éléments donc je vais mettre ce qui fonctionne dans mon cas ici. 
+
 En cours de réalisation...
 
 ### Installation
