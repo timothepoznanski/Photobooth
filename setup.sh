@@ -239,6 +239,55 @@ EOF
   ok "Mode kiosk configuré avec succès"
 }
 
+disable_keyring() {
+  step "Désactivation du keyring GNOME"
+  
+  progress "Configuration pour désactiver le keyring..."
+  
+  # Créer le fichier pour désactiver le keyring au démarrage
+  mkdir -p "$HOME_DIR/.config/autostart"
+  
+  cat > "$HOME_DIR/.config/autostart/gnome-keyring-secrets.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Secrets Keyring
+Hidden=true
+NoDisplay=true
+EOF
+
+  cat > "$HOME_DIR/.config/autostart/gnome-keyring-ssh.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=SSH Keyring
+Hidden=true
+NoDisplay=true
+EOF
+
+  cat > "$HOME_DIR/.config/autostart/gnome-keyring-pkcs11.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Certificate and Key Storage
+Hidden=true
+NoDisplay=true
+EOF
+
+  # Ajouter les variables d'environnement pour désactiver le keyring
+  if ! grep -q "GNOME_KEYRING_CONTROL" "$HOME_DIR/.bashrc"; then
+    cat >> "$HOME_DIR/.bashrc" <<EOF
+
+# Désactiver GNOME Keyring
+unset GNOME_KEYRING_CONTROL
+unset GNOME_KEYRING_PID
+unset SSH_AUTH_SOCK
+unset GPG_AGENT_INFO
+EOF
+  fi
+  
+  chown -R "$INSTALL_USER:$INSTALL_USER" "$HOME_DIR/.config"
+  
+  ok "Keyring GNOME désactivé"
+}
+
 setup_systemd() {
   step "Configuration des services système"
   
@@ -348,6 +397,7 @@ main() {
   fi
   
   setup_python_env
+  disable_keyring
   setup_kiosk
   setup_systemd
   
