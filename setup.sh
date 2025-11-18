@@ -239,68 +239,6 @@ EOF
   ok "Mode kiosk configuré avec succès"
 }
 
-disable_keyring() {
-  step "Désactivation du keyring GNOME"
-  
-  progress "Désactivation COMPLÈTE du keyring..."
-  
-  # Méthode RADICALE: Renommer les fichiers système d'autostart
-  if [[ -f /etc/xdg/autostart/gnome-keyring-secrets.desktop ]]; then
-    mv /etc/xdg/autostart/gnome-keyring-secrets.desktop /etc/xdg/autostart/gnome-keyring-secrets.desktop.disabled 2>/dev/null || true
-    log "gnome-keyring-secrets.desktop désactivé"
-  fi
-  
-  if [[ -f /etc/xdg/autostart/gnome-keyring-ssh.desktop ]]; then
-    mv /etc/xdg/autostart/gnome-keyring-ssh.desktop /etc/xdg/autostart/gnome-keyring-ssh.desktop.disabled 2>/dev/null || true
-    log "gnome-keyring-ssh.desktop désactivé"
-  fi
-  
-  if [[ -f /etc/xdg/autostart/gnome-keyring-pkcs11.desktop ]]; then
-    mv /etc/xdg/autostart/gnome-keyring-pkcs11.desktop /etc/xdg/autostart/gnome-keyring-pkcs11.desktop.disabled 2>/dev/null || true
-    log "gnome-keyring-pkcs11.desktop désactivé"
-  fi
-  
-  # Créer aussi les fichiers de masquage au niveau utilisateur (double sécurité)
-  mkdir -p "$HOME_DIR/.config/autostart"
-  
-  for keyring_file in gnome-keyring-secrets gnome-keyring-ssh gnome-keyring-pkcs11; do
-    cat > "$HOME_DIR/.config/autostart/${keyring_file}.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=${keyring_file}
-Exec=/bin/true
-Hidden=true
-NoDisplay=true
-X-GNOME-Autostart-enabled=false
-EOF
-  done
-
-  # Variables d'environnement
-  if ! grep -q "GNOME_KEYRING_CONTROL" "$HOME_DIR/.bashrc" 2>/dev/null; then
-    cat >> "$HOME_DIR/.bashrc" <<EOF
-
-# Désactiver GNOME Keyring
-unset GNOME_KEYRING_CONTROL
-unset GNOME_KEYRING_PID
-unset SSH_AUTH_SOCK
-unset GPG_AGENT_INFO
-export GNOME_KEYRING_CONTROL=
-EOF
-  fi
-
-  # Script pour tuer le keyring au démarrage de X
-  cat > "$HOME_DIR/.xsessionrc" <<'EOF'
-#!/bin/bash
-# Tuer tous les processus keyring
-pkill -f gnome-keyring-daemon 2>/dev/null
-EOF
-  chmod +x "$HOME_DIR/.xsessionrc"
-  
-  chown -R "$INSTALL_USER:$INSTALL_USER" "$HOME_DIR/.config" "$HOME_DIR/.bashrc" "$HOME_DIR/.xsessionrc" 2>/dev/null || true
-  
-  ok "Keyring GNOME complètement désactivé (fichiers système renommés)"
-}
-
 setup_systemd() {
   step "Configuration des services système"
   
@@ -410,7 +348,6 @@ main() {
   fi
   
   setup_python_env
-  disable_keyring
   setup_kiosk
   setup_systemd
   
