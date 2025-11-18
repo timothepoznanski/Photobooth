@@ -1,11 +1,21 @@
 # Configuration de l'imprimante thermique QR701
 
-Guide de configuration de l'imprimante thermique QR701 Mini 58mm sur Raspberry Pi 4.
+Guide de configuration de l'imprimante thermique QR701 Mini 58mm sur **Raspberry Pi 4**.
+
+> **📝 Note importante :** Les étapes 1 à 6 de ce guide sont **automatisées** par le script `setup.sh`.  
+> Lors de l'installation, répondez "Oui" à la question :  
+> `"Configurer le port série GPIO (/dev/ttyS0)? (o/N)"`
+> 
+> Ce guide reste utile pour :
+> - Comprendre le fonctionnement de la configuration
+> - Tester l'imprimante après installation (section 7)
+> - Résoudre les problèmes (section Dépannage)
+> - Installation manuelle si nécessaire
 
 ## Matériel requis
 
 - Imprimante thermique QR701 Mini 58mm (interface TTL)
-- Raspberry Pi 4
+- **Raspberry Pi 4** (requis pour `/dev/ttyS0`)
 - Connexion GPIO : TX, RX, GND, VCC (5-9V)
 
 ## Câblage GPIO

@@ -95,10 +95,10 @@ def detect_serial_ports():
                 port = f"COM{i}"
                 available_ports.append((port, port))
     
-    elif sys.platform.startswith('linux'):  # Linux (Raspberry Pi)
-        # Vérifier les ports série courants sur Linux
+    elif sys.platform.startswith('linux'):  # Linux (Raspberry Pi 4)
+        # Vérifier les ports série courants sur Raspberry Pi 4
         common_ports = [
-            '/dev/ttyS0', '/dev/ttyS1', '/dev/ttyAMA0',
+            '/dev/ttyS0', '/dev/ttyS1',
             '/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyUSB2',
             '/dev/ttyACM0', '/dev/ttyACM1', '/dev/ttyACM2'
         ]
@@ -112,7 +112,7 @@ def detect_serial_ports():
         if sys.platform.startswith('win'):
             available_ports = [('COM1', 'COM1'), ('COM3', 'COM3')]
         else:
-            available_ports = [('/dev/ttyS0', '/dev/ttyS0'), ('/dev/ttyAMA0', '/dev/ttyAMA0')]
+            available_ports = [('/dev/ttyS0', '/dev/ttyS0')]
     
     return available_ports
 
@@ -147,7 +147,7 @@ def capture_photo():
         logger.info("[CAPTURE] Utilisation de rpicam-still pour capture haute qualité")
         try:
             cmd = [
-                'rpicam-still',
+                '/usr/bin/rpicam-still',
                 '-o', filepath,
                 '--timeout', '1000',
                 '--width', '1280',      # Résolution réduite pour éviter fichiers trop lourds
@@ -536,7 +536,7 @@ def generate_video_stream():
         logger.info("[CAMERA] Démarrage de la Pi Camera...")
         # Commande rpicam-vid pour flux MJPEG - résolution 16/9
         cmd = [
-            'rpicam-vid',
+            '/usr/bin/rpicam-vid',
             '--codec', 'mjpeg',
             '--width', '1280',   # Résolution native plus compatible
             '--height', '720',   # Vrai 16/9 sans bandes noires

@@ -8,31 +8,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# -------------------- Couleurs et Affichage --------------------
-# Vérifier si le terminal supporte les couleurs
-if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && tput colors >/dev/null 2>&1; then
-  # Terminal avec support couleur
-  declare -A COLORS=(
-    [R]="\033[0;31m"   # Rouge
-    [G]="\033[0;32m"   # Vert
-    [Y]="\033[1;33m"   # Jaune
-    [C]="\033[0;36m"   # Cyan
-    [B]="\033[0;34m"   # Bleu
-    [P]="\033[0;35m"   # Pourpre
-    [W]="\033[1;37m"   # Blanc
-    [GRAY]="\033[0;90m" # Gris
-    [N]="\033[0m"      # Reset
-    [BOLD]="\033[1m"   # Gras
-    [DIM]="\033[2m"    # Atténué
-  )
-else
-  # Terminal sans couleur - utiliser des caractères simples
-  declare -A COLORS=(
-    [R]="" [G]="" [Y]="" [C]="" [B]="" [P]="" [W]="" [GRAY]="" [N]="" [BOLD]="" [DIM]=""
-  )
-fi
-
-# Fonctions d'affichage simplifiées (sans codes couleur problématiques)
+# Fonctions d'affichage simplifiées
 header()  { echo; echo "╭─────────────────────────────────────────────────────────────╮"; echo "│ $* │"; echo "╰─────────────────────────────────────────────────────────────╯"; echo; }
 step()    { echo "▶ $*"; }
 log()     { echo "  ℹ $*"; }
@@ -41,134 +17,13 @@ warn()    { echo "  ⚠ $*"; }
 error()   { echo "  ✗ $*" >&2; exit 1; }
 progress() { echo "  ⟳ $*"; }
 
-#!/usr/bin/env bash
-# ---------------------------------------------------------------------
-# SimpleBooth Kiosk Installer Script (allégé)
-# Auteur : Les Frères Poulain (modifié par Assistant)
-# Description : Configuration automatisée pour Raspberry Pi OS
-# ---------------------------------------------------------------------
-
-set -euo pipefail
-IFS=$'\n\t'
-
 # -------------------- Variables --------------------
 # Déduit le répertoire de l'application d'après l'emplacement du script
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIR="$APP_DIR/venv"
 INSTALL_USER="${SUDO_USER:-${USER}}"
 HOME_DIR="$(eval echo ~${INSTALL_USER})"
-
-# -------------------- Fonctions --------------------
-require_root() { 
-  (( EUID == 0 )) || error "Exécutez en root (sudo)"
-  [[ "$(uname -m)" =~ ^(arm|aarch64) ]] || error "Ce script est conçu pour Raspberry Pi (ARM)"
-  [[ -n "$SUDO_USER" ]] || error "Utilisez sudo, pas su ou root direct"
-}
-
-# -------------------- Main rapide --------------------
-main_quick() {
-  require_root
-  
-  echo "🚀 Installation rapide SimpleBooth"
-  echo "=================================="
-  
-  # Mise à jour système
-  echo "📦 Mise à jour système..."
-  apt-get update && apt-get upgrade -y
-  
-  # Installation dépendances
-  echo "🔧 Installation dépendances..."
-  apt-get install -y python3 python3-venv python3-pip build-essential libcap2-bin libcap-dev xserver-xorg xinit x11-xserver-utils unclutter chromium-browser
-  
-  # Configuration Python
-  echo "🐍 Configuration Python..."
-  python3 -m venv "$VENV_DIR"
-  source "$VENV_DIR/bin/activate"
-  pip install --upgrade pip
-  pip install -r "$APP_DIR/requirements.txt"
-  deactivate
-  
-  # Configuration kiosk
-  echo "🖥️ Configuration kiosk..."
-  mkdir -p "$HOME_DIR/.config/autostart"
-  cp "$APP_DIR/start_simplebooth.sh" "$HOME_DIR/"
-  chmod +x "$HOME_DIR/start_simplebooth.sh"
-  # Supprimer le lancement de l'app Flask du script kiosk
-  sed -i '/python app.py &/d' "$HOME_DIR/start_simplebooth.sh"
-  sed -i '/sleep 5/d' "$HOME_DIR/start_simplebooth.sh"
-  
-  cat > "$HOME_DIR/.config/autostart/simplebooth.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=SimpleBooth Kiosk
-Exec=$HOME_DIR/start_simplebooth.sh
-X-GNOME-Autostart-enabled=true
-Comment=SimpleBooth Kiosk mode
-EOF
-  
-  # Configuration systemd
-  echo "⚙️ Configuration systemd..."
-  cat > /etc/systemd/system/simplebooth-app.service <<EOF
-[Unit]
-Description=SimpleBooth Flask App
-After=network.target
-
-[Service]
-Type=simple
-User=$INSTALL_USER
-Group=$INSTALL_USER
-WorkingDirectory=$APP_DIR
-Environment=PATH=$VENV_DIR/bin
-ExecStart=$VENV_DIR/bin/python app.py
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-  
-  cat > /etc/systemd/system/simplebooth-kiosk.service <<EOF
-[Unit]
-Description=SimpleBooth Kiosk
-After=graphical.target
-Wants=graphical.target
-Requires=simplebooth-app.service
-
-[Service]
-Type=simple
-User=$INSTALL_USER
-Group=$INSTALL_USER
-Environment=DISPLAY=:0
-Environment=HOME=$HOME_DIR
-ExecStart=$HOME_DIR/start_simplebooth.sh
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=graphical.target
-EOF
-  
-  systemctl daemon-reload
-  systemctl enable simplebooth-app.service
-  systemctl enable simplebooth-kiosk.service
-  
-  # Autologin
-  mkdir -p /etc/systemd/system/getty@tty1.service.d
-  cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $INSTALL_USER --noclear %I \$TERM
-EOF
-  
-  echo "✅ Installation terminée !"
-  echo "🔄 Redémarrage recommandé"
-}
-
-# Mode rapide si argument --quick
-if [[ "${1:-}" == "--quick" ]]; then
-  main_quick
-  exit 0
-fi
+AUTOSTART_DIR="$HOME_DIR/.config/autostart"
 WAVE_ENABLED=true
 
 # Vérification système critique
@@ -217,7 +72,7 @@ update_system() {
 }
 
 install_dependencies() {
-  local pkgs=(python3 python3-venv python3-pip build-essential libcap2-bin libcap-dev xserver-xorg xinit x11-xserver-utils unclutter)
+  local pkgs=(python3 python3-venv python3-pip build-essential libcap2-bin libcap-dev xserver-xorg xinit x11-xserver-utils unclutter curl git)
   [[ -n "$CHROMIUM_PKG" ]] && pkgs+=("$CHROMIUM_PKG")
   step "Installation des dépendances"
   log "${#pkgs[@]} paquets à installer"
@@ -227,7 +82,7 @@ install_dependencies() {
   
   # Vérification critique
   progress "Vérification des paquets critiques..."
-  for pkg in python3 python3-venv; do
+  for pkg in python3 python3-venv curl; do
     dpkg -l "$pkg" &>/dev/null || error "Échec installation $pkg"
   done
   
@@ -296,10 +151,13 @@ setup_python_env() {
   
   if [[ -f "$APP_DIR/requirements.txt" ]]; then
     progress "Installation depuis requirements.txt..."
-    pip install -r "$APP_DIR/requirements.txt" || error "Échec installation requirements.txt"
+    pip install -r "$APP_DIR/requirements.txt" || {
+      warn "Certains paquets ont échoué, tentative d'installation des paquets essentiels..."
+      pip install flask pillow numpy pyserial python-escpos || error "Échec installation paquets essentiels"
+    }
   else
-    progress "Installation des paquets Python (flask, pillow, numpy)..."
-    pip install flask pillow numpy || error "Échec installation paquets Python"
+    progress "Installation des paquets Python essentiels..."
+    pip install flask pillow numpy pyserial python-escpos || error "Échec installation paquets Python"
   fi
   
   deactivate
@@ -308,8 +166,13 @@ setup_python_env() {
 
 setup_kiosk() {
   step "Configuration du mode kiosk"
-  local autostart="$HOME_DIR/.config/autostart"
-  mkdir -p "$autostart"
+  
+  # Vérifier que CHROMIUM_PKG est défini
+  [[ -z "$CHROMIUM_PKG" ]] && CHROMIUM_PKG="chromium"
+  
+  mkdir -p "$AUTOSTART_DIR"
+  
+  # Créer le script de démarrage
   cat > "$HOME_DIR/start_simplebooth.sh" <<EOF
 #!/usr/bin/env bash
 
@@ -319,13 +182,24 @@ pkill -f chromium
 sleep 2
 
 # Désactiver l'écran de veille et le verrouillage
-xset s off dpms s noblank
+xset s off
+xset -dpms
+xset s noblank
 
 # Cacher le curseur de la souris
 unclutter -idle 0.1 -root &
 
-# === APPLICATION ===
-# L'app Flask est maintenant gérée par un service séparé
+# Attendre que l'application Flask soit disponible
+# (l'app est lancée par le service simplebooth-app.service)
+echo "Attente du démarrage de l'application Flask..."
+for i in {1..30}; do
+  if curl -s http://localhost:5000 >/dev/null 2>&1; then
+    echo "Application Flask prête!"
+    break
+  fi
+  echo "Tentative \$i/30..."
+  sleep 1
+done
 
 # === BROWSER ===
 # Lancer Chromium en mode kiosk
@@ -350,7 +224,9 @@ exec $CHROMIUM_PKG --kiosk --no-sandbox --disable-infobars \
   http://localhost:5000
 EOF
   chmod +x "$HOME_DIR/start_simplebooth.sh"
-  cat > "$autostart/simplebooth.desktop" <<EOF
+  chown "$INSTALL_USER:$INSTALL_USER" "$HOME_DIR/start_simplebooth.sh"
+  
+  cat > "$AUTOSTART_DIR/simplebooth.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=SimpleBooth Kiosk
@@ -358,13 +234,17 @@ Exec=$HOME_DIR/start_simplebooth.sh
 X-GNOME-Autostart-enabled=true
 Comment=SimpleBooth Kiosk mode
 EOF
+  chown "$INSTALL_USER:$INSTALL_USER" "$AUTOSTART_DIR/simplebooth.desktop"
+  
   ok "Mode kiosk configuré avec succès"
 }
 
 setup_systemd() {
   step "Configuration des services système"
-  # S'assurer que le script de démarrage existe
-  [[ -f "$HOME_DIR/start_simplebooth.sh" ]] || error "Script de démarrage manquant"
+  
+  # S'assurer que les permissions sont correctes sur APP_DIR
+  chown -R "$INSTALL_USER:$INSTALL_USER" "$APP_DIR"
+  
   progress "Création du service Flask app..."
   
   cat > /etc/systemd/system/simplebooth-app.service <<EOF
@@ -377,10 +257,13 @@ Type=simple
 User=$INSTALL_USER
 Group=$INSTALL_USER
 WorkingDirectory=$APP_DIR
-Environment=PATH=$VENV_DIR/bin
-ExecStart=$VENV_DIR/bin/python app.py
+Environment=PATH=$VENV_DIR/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=$VENV_DIR/bin/python $APP_DIR/app.py
 Restart=on-failure
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -390,7 +273,7 @@ EOF
   cat > /etc/systemd/system/simplebooth-kiosk.service <<EOF
 [Unit]
 Description=SimpleBooth Kiosk
-After=graphical.target
+After=graphical.target simplebooth-app.service
 Wants=graphical.target
 Requires=simplebooth-app.service
 
@@ -400,9 +283,12 @@ User=$INSTALL_USER
 Group=$INSTALL_USER
 Environment=DISPLAY=:0
 Environment=HOME=$HOME_DIR
+Environment=XAUTHORITY=$HOME_DIR/.Xauthority
 ExecStart=$HOME_DIR/start_simplebooth.sh
 Restart=on-failure
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=graphical.target
@@ -410,10 +296,15 @@ EOF
   
   progress "Rechargement des services systemd..."
   systemctl daemon-reload || error "Échec rechargement systemd"
+  
   progress "Activation des services SimpleBooth..."
   systemctl enable simplebooth-app.service || error "Échec activation service app"
   systemctl enable simplebooth-kiosk.service || error "Échec activation service kiosk"
+  
   ok "Services système configurés avec succès"
+  
+  # Configuration autologin
+  progress "Configuration de la connexion automatique..."
   mkdir -p /etc/systemd/system/getty@tty1.service.d
   cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
 [Service]
@@ -431,13 +322,15 @@ main() {
   header " SIMPLEBOOTH INSTALLER "
   echo "Auteur: Les Frères Poulain"
   echo "Version: Raspberry Pi OS"
+  echo "Répertoire: $APP_DIR"
+  echo "Utilisateur: $INSTALL_USER"
   echo
   
   if confirm "Update system et install dependencies? (o/N)"; then
     update_system
     install_dependencies
   else
-    log "Update et install ignored"
+    log "Update et install ignorés"
   fi
 
   if confirm "Configurer écran Waveshare 7\" DSI? (o/N)"; then 
@@ -448,7 +341,7 @@ main() {
   fi
   
   # Configuration du port série pour l'imprimante
-  if confirm "Configurer le port série GPIO (/dev/ttyAMA0)? (o/N)"; then
+  if confirm "Configurer le port série GPIO? (o/N)"; then
     configure_serial
   else
     log "Configuration port série ignorée"
@@ -458,9 +351,19 @@ main() {
   setup_kiosk
   setup_systemd
   
+  # Créer les dossiers nécessaires pour l'application
+  progress "Création des dossiers de l'application..."
+  mkdir -p "$APP_DIR/photos" "$APP_DIR/static" "$APP_DIR/templates"
+  chown -R "$INSTALL_USER:$INSTALL_USER" "$APP_DIR"
+  ok "Dossiers créés avec succès"
+  
   echo
   header "✨ INSTALLATION TERMINÉE ✨"
-  warn "Redémarrage recommandé pour activer tous les services"
+  log "Les services sont configurés et s'activeront au prochain démarrage:"
+  log "  - simplebooth-app.service  (Flask application)"
+  log "  - simplebooth-kiosk.service (Mode kiosk Chromium)"
+  echo
+  warn "Redémarrage REQUIS pour activer tous les services"
   confirm "Redémarrer maintenant? (o/N)" && reboot
 }
 
