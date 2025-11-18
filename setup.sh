@@ -244,35 +244,31 @@ disable_keyring() {
   
   progress "Configuration pour désactiver le keyring..."
   
-  # Créer le fichier pour désactiver le keyring au démarrage
+  # Méthode 1: Masquer les fichiers autostart système
   mkdir -p "$HOME_DIR/.config/autostart"
   
-  cat > "$HOME_DIR/.config/autostart/gnome-keyring-secrets.desktop" <<EOF
+  # Copier et modifier les fichiers pour les désactiver complètement
+  for keyring_file in gnome-keyring-secrets gnome-keyring-ssh gnome-keyring-pkcs11; do
+    cat > "$HOME_DIR/.config/autostart/${keyring_file}.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Secrets Keyring
+Name=${keyring_file}
+Exec=/bin/true
 Hidden=true
 NoDisplay=true
+X-GNOME-Autostart-enabled=false
 EOF
+  done
 
-  cat > "$HOME_DIR/.config/autostart/gnome-keyring-ssh.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=SSH Keyring
-Hidden=true
-NoDisplay=true
-EOF
+  # Méthode 2: Désactiver via dconf (pour GNOME)
+  if command -v dconf >/dev/null 2>&1; then
+    sudo -u "$INSTALL_USER" dconf write /org/gnome/keyring/daemon-components/pkcs11 "['']" 2>/dev/null || true
+    sudo -u "$INSTALL_USER" dconf write /org/gnome/keyring/daemon-components/secrets "['']" 2>/dev/null || true
+    sudo -u "$INSTALL_USER" dconf write /org/gnome/keyring/daemon-components/ssh "['']" 2>/dev/null || true
+  fi
 
-  cat > "$HOME_DIR/.config/autostart/gnome-keyring-pkcs11.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Certificate and Key Storage
-Hidden=true
-NoDisplay=true
-EOF
-
-  # Ajouter les variables d'environnement pour désactiver le keyring
-  if ! grep -q "GNOME_KEYRING_CONTROL" "$HOME_DIR/.bashrc"; then
+  # Méthode 3: Variables d'environnement
+  if ! grep -q "GNOME_KEYRING_CONTROL" "$HOME_DIR/.bashrc" 2>/dev/null; then
     cat >> "$HOME_DIR/.bashrc" <<EOF
 
 # Désactiver GNOME Keyring
@@ -280,12 +276,32 @@ unset GNOME_KEYRING_CONTROL
 unset GNOME_KEYRING_PID
 unset SSH_AUTH_SOCK
 unset GPG_AGENT_INFO
+export GNOME_KEYRING_CONTROL=
+EOF
+  fi
+
+  # Méthode 4: Créer un script pour tuer le keyring au démarrage de X
+  cat > "$HOME_DIR/.xsessionrc" <<'EOF'
+#!/bin/bash
+# Tuer tous les processus keyring
+pkill -f gnome-keyring-daemon
+EOF
+  chmod +x "$HOME_DIR/.xsessionrc"
+  
+  # Méthode 5: Désactiver dans le profil
+  if ! grep -q "gnome-keyring" "$HOME_DIR/.profile" 2>/dev/null; then
+    cat >> "$HOME_DIR/.profile" <<'EOF'
+
+# Désactiver complètement GNOME Keyring
+if [ -n "$DESKTOP_SESSION" ]; then
+    pkill -f gnome-keyring-daemon 2>/dev/null
+fi
 EOF
   fi
   
-  chown -R "$INSTALL_USER:$INSTALL_USER" "$HOME_DIR/.config"
+  chown -R "$INSTALL_USER:$INSTALL_USER" "$HOME_DIR/.config" "$HOME_DIR/.bashrc" "$HOME_DIR/.xsessionrc" "$HOME_DIR/.profile" 2>/dev/null || true
   
-  ok "Keyring GNOME désactivé"
+  ok "Keyring GNOME désactivé avec plusieurs méthodes"
 }
 
 setup_systemd() {
