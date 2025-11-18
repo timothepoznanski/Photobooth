@@ -19,7 +19,7 @@ from config_utils import (
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'photobooth_secret_key_2024')
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s', filename='/tmp/simplebooth.log', filemode='w')
 logger = logging.getLogger(__name__)
 
 # Initialiser les dossiers nécessaires
@@ -517,6 +517,7 @@ def serve_photo(filename):
 @app.route('/video_stream')
 def video_stream():
     """Flux vidéo MJPEG en temps réel"""
+    logger.info("[VIDEO_STREAM] Route appelée")
     response = Response(generate_video_stream(),
                        mimetype='multipart/x-mixed-replace; boundary=frame')
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -547,6 +548,7 @@ def generate_video_stream():
             '--nopreview'        # Pas d'aperçu local
         ]
 
+        logger.info(f"[CAMERA] Commande: {' '.join(cmd)}")
         camera_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -554,6 +556,11 @@ def generate_video_stream():
             bufsize=0
         )
 
+        # Lire stderr pour voir les erreurs
+        stderr_thread = threading.Thread(target=lambda: logger.info(f"[CAMERA] STDERR: {camera_process.stderr.read().decode()}"))
+        stderr_thread.start()
+
+        logger.info("[CAMERA] Processus démarré, attente des données...")
         # Buffer pour assembler les frames JPEG
         buffer = b''
 
@@ -587,6 +594,7 @@ def generate_video_stream():
                     with frame_lock:
                         last_frame = jpeg_frame
 
+                    logger.info(f"[CAMERA] Frame extraite, taille: {len(jpeg_frame)} bytes")
                     # Envoyer la frame au navigateur
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n'
@@ -703,4 +711,4 @@ if __name__ == '__main__':
     # print_startup_info()
     
     # Démarrer l'application Flask
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

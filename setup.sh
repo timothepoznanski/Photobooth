@@ -93,6 +93,9 @@ main_quick() {
   mkdir -p "$HOME_DIR/.config/autostart"
   cp "$APP_DIR/start_simplebooth.sh" "$HOME_DIR/"
   chmod +x "$HOME_DIR/start_simplebooth.sh"
+  # Supprimer le lancement de l'app Flask du script kiosk
+  sed -i '/python app.py &/d' "$HOME_DIR/start_simplebooth.sh"
+  sed -i '/sleep 5/d' "$HOME_DIR/start_simplebooth.sh"
   
   cat > "$HOME_DIR/.config/autostart/simplebooth.desktop" <<EOF
 [Desktop Entry]
@@ -105,13 +108,48 @@ EOF
   
   # Configuration systemd
   echo "⚙️ Configuration systemd..."
-  cp "$APP_DIR/systemd/simplebooth-kiosk.service" /etc/systemd/system/
-  sed -i "s/User=.*/User=$INSTALL_USER/" /etc/systemd/system/simplebooth-kiosk.service
-  sed -i "s/Group=.*/Group=$INSTALL_USER/" /etc/systemd/system/simplebooth-kiosk.service
-  sed -i "s|Environment=HOME=.*|Environment=HOME=$HOME_DIR|" /etc/systemd/system/simplebooth-kiosk.service
-  sed -i "s|ExecStart=.*|ExecStart=$HOME_DIR/start_simplebooth.sh|" /etc/systemd/system/simplebooth-kiosk.service
+  cat > /etc/systemd/system/simplebooth-app.service <<EOF
+[Unit]
+Description=SimpleBooth Flask App
+After=network.target
+
+[Service]
+Type=simple
+User=$INSTALL_USER
+Group=$INSTALL_USER
+WorkingDirectory=$APP_DIR
+Environment=PATH=$VENV_DIR/bin
+ExecStart=$VENV_DIR/bin/python app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  
+  cat > /etc/systemd/system/simplebooth-kiosk.service <<EOF
+[Unit]
+Description=SimpleBooth Kiosk
+After=graphical.target
+Wants=graphical.target
+Requires=simplebooth-app.service
+
+[Service]
+Type=simple
+User=$INSTALL_USER
+Group=$INSTALL_USER
+Environment=DISPLAY=:0
+Environment=HOME=$HOME_DIR
+ExecStart=$HOME_DIR/start_simplebooth.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
+EOF
   
   systemctl daemon-reload
+  systemctl enable simplebooth-app.service
   systemctl enable simplebooth-kiosk.service
   
   # Autologin
@@ -287,17 +325,7 @@ xset s off dpms s noblank
 unclutter -idle 0.1 -root &
 
 # === APPLICATION ===
-# Aller dans le répertoire de l'application
-cd "$APP_DIR"
-
-# Activer l'environnement virtuel
-source "$VENV_DIR/bin/activate"
-
-# Lancer l'application Flask en arrière-plan
-python app.py &
-
-# Attendre que l'application démarre
-sleep 5
+# L'app Flask est maintenant gérée par un service séparé
 
 # === BROWSER ===
 # Lancer Chromium en mode kiosk
@@ -337,13 +365,34 @@ setup_systemd() {
   step "Configuration des services système"
   # S'assurer que le script de démarrage existe
   [[ -f "$HOME_DIR/start_simplebooth.sh" ]] || error "Script de démarrage manquant"
-  progress "Création du service systemd..."
+  progress "Création du service Flask app..."
   
+  cat > /etc/systemd/system/simplebooth-app.service <<EOF
+[Unit]
+Description=SimpleBooth Flask App
+After=network.target
+
+[Service]
+Type=simple
+User=$INSTALL_USER
+Group=$INSTALL_USER
+WorkingDirectory=$APP_DIR
+Environment=PATH=$VENV_DIR/bin
+ExecStart=$VENV_DIR/bin/python app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  
+  progress "Création du service kiosk..."
   cat > /etc/systemd/system/simplebooth-kiosk.service <<EOF
 [Unit]
 Description=SimpleBooth Kiosk
 After=graphical.target
 Wants=graphical.target
+Requires=simplebooth-app.service
 
 [Service]
 Type=simple
@@ -361,8 +410,9 @@ EOF
   
   progress "Rechargement des services systemd..."
   systemctl daemon-reload || error "Échec rechargement systemd"
-  progress "Activation du service SimpleBooth..."
-  systemctl enable simplebooth-kiosk.service || error "Échec activation service"
+  progress "Activation des services SimpleBooth..."
+  systemctl enable simplebooth-app.service || error "Échec activation service app"
+  systemctl enable simplebooth-kiosk.service || error "Échec activation service kiosk"
   ok "Services système configurés avec succès"
   mkdir -p /etc/systemd/system/getty@tty1.service.d
   cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
