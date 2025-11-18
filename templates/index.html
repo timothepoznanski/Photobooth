@@ -3,14 +3,14 @@
 {% block title %}Photobooth{% endblock %}
 
 {% block content %}
-<div class="container-fluid p-3" style="height: 100vh; overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #1a1a1a;">
+<div class="container-fluid p-3" style="height: 100vh; overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #000;">
     <!-- Bouton restart discret en haut à gauche -->
     <button onclick="restartKiosk()" 
             class="btn btn-sm btn-outline-secondary position-fixed" 
-            style="top: 10px; left: 10px; z-index: 30; opacity: 0.3; border-radius: 5px; padding: 5px 10px;"
+            style="top: 10px; left: 10px; z-index: 30; opacity: 1; border-radius: 5px; padding: 5px 10px;"
             title="Redémarrer le kiosque"
             onmouseover="this.style.opacity='1'" 
-            onmouseout="this.style.opacity='0.3'">
+            onmouseout="this.style.opacity='1'">
         <i class="fas fa-sync-alt"></i>
     </button>
     
