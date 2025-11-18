@@ -96,45 +96,6 @@
         <p class="mb-0">Veuillez patienter</p>
     </div>
 </div>
-
-
-<!-- Modale de confirmation de suppression -->
-<div class="modal fade" id="deletePhotoModal" tabindex="-1" aria-labelledby="deletePhotoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deletePhotoModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Supprimer la photo
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <div class="mb-3">
-                    <i class="fas fa-trash-alt text-danger" style="font-size: 3rem;"></i>
-                </div>
-                <h6 class="mb-3">Êtes-vous sûr de vouloir supprimer cette photo ?</h6>
-                <div class="alert alert-warning" role="alert">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Attention :</strong> Cette action est irréversible !
-                </div>
-                <p class="text-muted mb-0">
-                    <small>La photo sera définitivement supprimée du système</small>
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>
-                    Annuler
-                </button>
-                <button type="button" class="btn btn-danger" onclick="confirmDeletePhoto()">
-                    <i class="fas fa-trash-alt me-2"></i>
-                    Supprimer la photo
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -222,17 +183,7 @@ function closeOverlay() {
     overlay.style.display = 'none';
 }
 
-function deletePhoto() {
-    // Ouvrir la modale de confirmation
-    const modal = new bootstrap.Modal(document.getElementById('deletePhotoModal'));
-    modal.show();
-}
-
-async function confirmDeletePhoto() {
-    // Fermer la modale
-    const modal = bootstrap.Modal.getInstance(document.getElementById('deletePhotoModal'));
-    modal.hide();
-    
+async function deletePhoto() {
     try {
         const response = await fetch('/delete_current', {
             method: 'POST',
