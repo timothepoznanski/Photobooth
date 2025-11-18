@@ -274,12 +274,33 @@ setup_kiosk() {
   mkdir -p "$autostart"
   cat > "$HOME_DIR/start_simplebooth.sh" <<EOF
 #!/usr/bin/env bash
+
+# === SETUP ===
+# Tuer les processus chromium existants pour éviter les conflits
+pkill -f chromium
+sleep 2
+
+# Désactiver l'écran de veille et le verrouillage
 xset s off dpms s noblank
+
+# Cacher le curseur de la souris
 unclutter -idle 0.1 -root &
+
+# === APPLICATION ===
+# Aller dans le répertoire de l'application
 cd "$APP_DIR"
+
+# Activer l'environnement virtuel
 source "$VENV_DIR/bin/activate"
+
+# Lancer l'application Flask en arrière-plan
 python app.py &
+
+# Attendre que l'application démarre
 sleep 5
+
+# === BROWSER ===
+# Lancer Chromium en mode kiosk
 exec $CHROMIUM_PKG --kiosk --no-sandbox --disable-infobars \
   --disable-features=TranslateUI,Translate \
   --disable-translate \
